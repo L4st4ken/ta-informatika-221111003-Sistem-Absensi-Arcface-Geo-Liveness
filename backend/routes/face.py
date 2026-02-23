@@ -18,14 +18,11 @@ from config import Config
 
 face_bp = Blueprint("face_bp", __name__, url_prefix="/face")
 
-# Init Model
 detector = FaceDetector(model_dir="models", model_name="det_500m.onnx")
 predictor = dlib.shape_predictor(Config.DLIB_LANDMARK_PATH)
 liveness_mgr = LivenessManager(predictor)
 
-# --- HELPER TIMEZONE WIB ---
 def get_wib_time():
-    # UTC + 7 Jam
     return datetime.utcnow() + timedelta(hours=7)
 
 def check_face_alignment(face_box, img_w, img_h):
@@ -76,8 +73,11 @@ def liveness_frame():
     
     lat_attempt = data.get("latitude")
     lon_attempt = data.get("longitude")
+    
+    # 1. AMBIL INTENT DARI FRONTEND
+    action_type = data.get("action_type", "check_in")
+    alasan_note = data.get("note", "").strip()
 
-    # 1. Deteksi Wajah
     boxes = detector.detect_faces(img)
     if not boxes: return jsonify({"status": "no_face", "msg": "Wajah tidak ditemukan"}), 200
 
@@ -85,7 +85,6 @@ def liveness_frame():
     x1, y1, x2, y2 = box
     face_box_coords = [int(x1), int(y1), int(x2), int(y2)]
 
-    # 2. Cek Guide Box
     h, w, _ = img.shape
     is_aligned, align_msg, guide_box_coords = check_face_alignment(box, w, h)
 
@@ -99,7 +98,6 @@ def liveness_frame():
             "current_blinks": 0, "target_blinks": session.target_blinks
         }), 200
 
-    # 3. Liveness Check
     face_rect = dlib.rectangle(int(x1), int(y1), int(x2), int(y2))
     session.update_seen()
     passed = session.ls.process_frame(img, face_rect)
@@ -114,7 +112,6 @@ def liveness_frame():
             "face_box": face_box_coords, "guide_box": guide_box_coords
         }), 200
 
-    # 4. ArcFace Check
     crop = session.last_frame
     captured_embedding = face_service.get_embedding(crop)
     if captured_embedding is None: return jsonify({"status": "error", "msg": "failed_extract_embedding"}), 500
@@ -134,39 +131,32 @@ def liveness_frame():
         return jsonify({"status": "error", "msg": "Decryption failed"}), 500
 
     score, ok_face = calculate_face_similarity(stored_embedding, captured_embedding, threshold=Config.ARCFACE_THRESHOLD)
-    
-    # Init pesan default
     msg_response = "Wajah Tidak Cocok" 
 
-    # === [CORE BUSINESS LOGIC] ===
+    # === [CORE BUSINESS LOGIC - EXPLICIT INTENT] ===
     if ok_face:
-        # Gunakan Waktu WIB (UTC+7)
         current_dt = get_wib_time() 
         current_time_obj = current_dt.time()
         today = current_dt.date()
 
-        # [ANTI SPAM] Cek 10 detik terakhir
+        # ANTI SPAM
         recent_log = db.query(AttendanceLog).filter(
             AttendanceLog.user_id == user_id,
             AttendanceLog.timestamp_attempt >= (current_dt - timedelta(seconds=10))
         ).first()
 
         if recent_log:
-            print("🚫 Spam detected: Mengabaikan frame tambahan.")
             return jsonify({
-                "status": "liveness_passed",
-                "face_similarity_score": float(score),
-                "face_passed": True,
-                "msg": "Proses selesai (Duplicate Ignored).",
+                "status": "liveness_passed", "face_similarity_score": float(score), 
+                "face_passed": True, "msg": "Proses selesai (Duplicate Ignored).", 
                 "final_status": recent_log.final_status
             }), 200
 
-        # --- A. AMBIL JADWAL / SHIFT ---
+        # AMBIL JADWAL
         assigned_branches = []
         jam_masuk_target = time(8, 0)
         jam_pulang_target = time(16, 0)
         
-        # 1. Cek Jadwal (Supervisor)
         todays_schedules = db.query(Schedule).filter_by(user_id=user_id, tanggal=today, is_active=True).all()
         if todays_schedules:
             assigned_branches = [s.branch_id for s in todays_schedules]
@@ -174,14 +164,12 @@ def liveness_frame():
             end_times = [s.jam_selesai for s in todays_schedules]
             if start_times: jam_masuk_target = min(start_times)
             if end_times: jam_pulang_target = max(end_times)
-
-        # 2. Cek Shift (Karyawan)
         elif user.shift:
             jam_masuk_target = user.shift.jam_masuk
             jam_pulang_target = user.shift.jam_pulang
             if user.branch_id: assigned_branches = [user.branch_id]
         
-        # --- B. DETEKSI LOKASI ---
+        # CEK LOKASI
         detected_branch_id = None
         is_in_valid_location = False
 
@@ -195,106 +183,84 @@ def liveness_frame():
                     detected_branch_id = br.branch_id
                     break 
 
-        # --- C. TENTUKAN TARGET LOG (CHECK-IN / CHECK-OUT) ---
-        
-        # [PERBAIKAN UTAMA] Cari Log TERAKHIR user ini, apa pun tanggalnya.
-        last_log = db.query(AttendanceLog).filter(
-            AttendanceLog.user_id == user_id
+        # CARI LOG YANG MASIH GANTUNG (Belum Pulang)
+        open_log = db.query(AttendanceLog).filter(
+            AttendanceLog.user_id == user_id,
+            AttendanceLog.check_out_time == None,
+            AttendanceLog.final_status == 'Success'
         ).order_by(AttendanceLog.timestamp_attempt.desc()).first()
 
-        target_log = None
-        
-        # Jika log terakhir ternyata BELUM CHECK-OUT, berarti user mau pulang.
-        if last_log and last_log.check_out_time is None:
-            # Safety Check: Pastikan log ini valid (kurang dari 18 jam shift)
-            duration_since = datetime.utcnow() - last_log.check_in_time
-            if duration_since.total_seconds() < (18 * 3600): 
-                target_log = last_log
+        if open_log:
+            duration = current_dt - open_log.check_in_time
+            if duration.total_seconds() > (18 * 3600):
+                open_log = None 
 
         try:
-            # === SKENARIO 1: CHECK-OUT (Jika target_log ketemu) ===
-            if target_log:
-                # 1. Anti-Double Tap (Minimal kerja 1 menit baru boleh pulang)
-                duration_work = current_dt - target_log.check_in_time
-                if duration_work.total_seconds() < 60:
-                     print(f"🚫 Pulang terlalu cepat (debounce). Durasi: {int(duration_work.total_seconds())}s")
-                     # Return sukses palsu agar UI tidak error
-                     return jsonify({
-                        "status": "liveness_passed",
-                        "face_similarity_score": float(score),
-                        "face_passed": True,
-                        "msg": "Check-In Berhasil! (Tunggu 1 menit untuk pulang)",
-                        "final_status": target_log.final_status
-                    }), 200
-
-                # 2. Validasi Lokasi saat Check-Out
-                if not is_in_valid_location:
-                    msg_response = "Gagal Check-Out! Lokasi Anda jauh dari kantor."
-                    ok_face = False # Frontend Merah
-                
+            # === JIKA USER KLIK TOMBOL: ABSEN PULANG ===
+            if action_type == "check_out":
+                if not open_log:
+                    ok_face = False
+                    msg_response = "Ditolak! Anda belum Absen Masuk hari ini."
                 else:
-                    # Logic: Pindah Cabang atau Pulang Cepat
-                    is_moved = (detected_branch_id != target_log.checkin_branch_id)
-                    is_early = current_time_obj < jam_pulang_target 
-                    
-                    if is_early:
-                        # Karyawan Biasa: Ditolak
-                        if user.role == 'karyawan':
-                            msg_response = f"Ditolak! Belum jam pulang ({jam_pulang_target.strftime('%H:%M')})"
-                            ok_face = False
-                        # Supervisor: Boleh (Pulang Cepat)
-                        else:
-                            target_log.check_out_time = current_dt
-                            target_log.checkout_branch_id = detected_branch_id
-                            target_log.attendance_status = 'Pulang Cepat'
-                            target_log.face_similarity_score = float(score)
-                            msg_response = "Check-Out Berhasil (Pulang Cepat)"
+                    duration_work = current_dt - open_log.check_in_time
+                    if duration_work.total_seconds() < 60:
+                        return jsonify({"status": "liveness_passed", "face_passed": True, "msg": "Tunggu 1 menit setelah masuk!", "final_status": "Success", "face_similarity_score": float(score)}), 200
+
+                    if not is_in_valid_location:
+                        msg_response = "Gagal Check-Out! Lokasi di luar area kantor."
+                        ok_face = False
                     else:
-                        # Pulang Normal
-                        target_log.check_out_time = current_dt
-                        target_log.checkout_branch_id = detected_branch_id
-                        target_log.face_similarity_score = float(score)
-                        msg_response = "Check-Out Berhasil!"
+                        is_early = current_time_obj < jam_pulang_target 
+                        
+                        open_log.check_out_time = current_dt
+                        open_log.checkout_branch_id = detected_branch_id
+                        open_log.face_similarity_score = float(score)
+                        
+                        # SIMPAN ALASAN DARI FRONTEND
+                        open_log.keterangan = alasan_note if alasan_note else "-"
 
-            # === SKENARIO 2: CHECK-IN BARU (Jika tidak ada target_log) ===
-            else:
-                status_hadir = "Tepat Waktu"
-                # Toleransi 15 menit dari jam masuk
-                limit_dt = datetime.combine(today, jam_masuk_target) + timedelta(minutes=15)
-                if current_dt > limit_dt: 
-                    status_hadir = "Terlambat"
+                        if is_early:
+                            open_log.attendance_status = 'Pulang Cepat'
+                            msg_response = "Check-Out Awal Berhasil Dicatat"
+                        else:
+                            open_log.attendance_status = 'Tepat Waktu'
+                            msg_response = "Check-Out Berhasil!"
 
-                if is_in_valid_location:
-                    new_log = AttendanceLog(
-                        user_id=user_id, 
-                        checkin_branch_id=detected_branch_id,
-                        check_in_time=current_dt, 
-                        attendance_status=status_hadir, 
-                        timestamp_attempt=current_dt,
-                        latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
-                        is_inside_geofence=True, is_liveness_passed=True, 
-                        face_similarity_score=float(score), final_status='Success'
-                    )
-                    db.add(new_log)
-                    msg_response = f"Check-In Berhasil ({status_hadir})"
+            # === JIKA USER KLIK TOMBOL: ABSEN MASUK ===
+            elif action_type == "check_in":
+                if open_log:
+                    ok_face = False
+                    msg_response = "Ditolak! Anda belum Check-Out dari sesi sebelumnya."
                 else:
-                    # Gagal Lokasi -> Catat Failure
-                    target_branch = db.query(Branch).filter(Branch.branch_id.in_(assigned_branches)).first()
-                    target_name = target_branch.nama_cabang if target_branch else "Unknown"
-                    
-                    new_log = AttendanceLog(
-                        user_id=user_id, 
-                        checkin_branch_id=assigned_branches[0] if assigned_branches else 1,
-                        timestamp_attempt=current_dt, 
-                        latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
-                        is_inside_geofence=False, is_liveness_passed=True, 
-                        face_similarity_score=float(score), final_status='Failure_Schedule'
-                    )
-                    db.add(new_log)
-                    msg_response = f"Ditolak! Lokasi salah. Target: {target_name}"
-                    ok_face = False # Frontend Merah
+                    status_hadir = "Tepat Waktu"
+                    limit_dt = datetime.combine(today, jam_masuk_target) + timedelta(minutes=15)
+                    if current_dt > limit_dt: status_hadir = "Terlambat"
 
-            # COMMIT DB (Hanya jika sukses atau error validasi bisnis)
+                    if is_in_valid_location:
+                        new_log = AttendanceLog(
+                            user_id=user_id, checkin_branch_id=detected_branch_id,
+                            check_in_time=current_dt, attendance_status=status_hadir, timestamp_attempt=current_dt,
+                            latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
+                            is_inside_geofence=True, is_liveness_passed=True, 
+                            face_similarity_score=float(score), final_status='Success',
+                            keterangan="Check-In Normal"
+                        )
+                        db.add(new_log)
+                        msg_response = f"Check-In Berhasil ({status_hadir})"
+                    else:
+                        target_branch = db.query(Branch).filter(Branch.branch_id.in_(assigned_branches)).first()
+                        target_name = target_branch.nama_cabang if target_branch else "Unknown"
+                        new_log = AttendanceLog(
+                            user_id=user_id, checkin_branch_id=assigned_branches[0] if assigned_branches else 1, check_in_time=current_dt,
+                            timestamp_attempt=current_dt, latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
+                            is_inside_geofence=False, is_liveness_passed=True, 
+                            face_similarity_score=float(score), final_status='Failure_Schedule',
+                            keterangan="Gagal Lokasi"
+                        )
+                        db.add(new_log)
+                        msg_response = f"Ditolak! Lokasi salah. Target: {target_name}"
+                        ok_face = False
+
             if ok_face or "Ditolak" in msg_response:
                 db.commit()
 
@@ -308,7 +274,7 @@ def liveness_frame():
     return jsonify({
         "status": "liveness_passed",
         "face_similarity_score": float(score),
-        "face_passed": bool(ok_face), # Ini menentukan warna (Hijau/Merah) di Frontend
-        "msg": msg_response,          # Ini pesan teks yang muncul
+        "face_passed": bool(ok_face),
+        "msg": msg_response,
         "final_status": "Success" if ok_face else "Failure"
     }), 200

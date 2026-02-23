@@ -143,6 +143,8 @@ class AttendanceLog(Base):
         default='Failure_Unauthorized'
     )
 
+    keterangan = Column(String(255), nullable=True)
+
     # Relationships
     user = relationship("User", back_populates="attendance_logs")
     

@@ -3,11 +3,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
 export default function AbsensiPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const actionType = searchParams.get('type') || 'auto';
+  const userNote = searchParams.get('note') || '';
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   
@@ -81,7 +84,9 @@ export default function AbsensiPage() {
       const res = await axios.post('http://127.0.0.1:5000/face/liveness/frame', {
         image_base64: imageSrc,
         latitude: location.latitude,
-        longitude: location.longitude
+        longitude: location.longitude,
+        action_type: actionType,
+        note: userNote
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });

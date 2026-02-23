@@ -195,7 +195,7 @@ export default function Dashboard() {
                     title="Siap Bekerja?" 
                     desc="Pastikan Anda berada di lokasi kantor yang sesuai jadwal."
                     btnText="ABSEN MASUK"
-                    onClick={() => router.push('/absensi')}
+                    onClick={() => router.push('/absensi?type=check_in')} 
                   />
                 )}
 
@@ -203,12 +203,17 @@ export default function Dashboard() {
                   <ActionState 
                     icon={<LogOut size={40} />} color="orange" 
                     title="Pulang / Dinas Luar?" 
-                    desc="Scan wajah untuk update lokasi dinas atau mengakhiri jam kerja."
+                    desc="Scan wajah untuk mengakhiri sesi kerja."
                     btnText="ABSEN PULANG"
-                    onClick={() => router.push('/absensi')}
+                    onClick={() => {
+                      const alasan = window.prompt("Anda yakin mau Absen Pulang sekarang?\n\nJika Pulang Cepat / Dinas Luar, wajib isi keterangan:");
+                      if (alasan !== null) {
+                        router.push(`/absensi?type=check_out&note=${encodeURIComponent(alasan)}`);
+                      }
+                    }} 
                   />
                 )}
-
+                
                 {action_status === 'done' && (
                   <div className="py-6">
                     <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-6 mx-auto animate-bounce-in">

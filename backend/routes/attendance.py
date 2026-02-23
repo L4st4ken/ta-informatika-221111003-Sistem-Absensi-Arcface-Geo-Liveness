@@ -6,7 +6,6 @@ from database.connection import get_db
 from models.models import AttendanceLog
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-# HAPUS SEMUA IMPORT AI (cv2, dlib, services, dll) BIAR RINGAN
 # File ini murni hanya untuk Query Database untuk laporan.
 
 attendance_bp = Blueprint("attendance_bp", __name__, url_prefix="/attendance")
@@ -45,10 +44,10 @@ def history():
             "jam_masuk": check_in_wib.strftime("%H:%M") if check_in_wib else "-",
             "jam_pulang": check_out_wib.strftime("%H:%M") if check_out_wib else "-",
             "durasi": durasi,
-            "status": log.attendance_status, # Contoh: "Terlambat", "Tepat Waktu"
+            "status": log.attendance_status, 
             "cabang": log.checkin_branch.nama_cabang if log.checkin_branch else "Unknown",
-            "status_akhir": log.final_status, # Success / Failure_GPS
-            "keterangan": log.attendance_status # Untuk frontend dashboard
+            "status_akhir": log.final_status,
+            "keterangan": log.keterangan if log.keterangan else "-" # <-- TAMBAHAN BARU
         })
         
     return jsonify(history_data), 200

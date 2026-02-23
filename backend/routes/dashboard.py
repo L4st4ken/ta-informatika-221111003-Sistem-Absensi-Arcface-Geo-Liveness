@@ -3,16 +3,20 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from database.connection import get_db
 from models.models import User, AttendanceLog, FaceEmbedding, Schedule, Branch, Shift
 from sqlalchemy import func, desc
-from datetime import date
+from datetime import datetime, timedelta
 
 dashboard_bp = Blueprint('dashboard_bp', __name__, url_prefix='/dashboard')
+
+def get_wib_today():
+    # Pastikan pakai WIB agar pergantian hari akurat
+    return (datetime.utcnow() + timedelta(hours=7)).date()
 
 @dashboard_bp.route('', methods=['GET'])
 @jwt_required()
 def get_summary():
     user_id = get_jwt_identity()
     db = next(get_db())
-    today = date.today()
+    today = get_wib_today()
 
     # 1. Ambil User Info
     user = db.query(User).filter_by(user_id=user_id).first()
@@ -22,25 +26,34 @@ def get_summary():
     face_rec = db.query(FaceEmbedding).filter_by(user_id=user_id).first()
     has_face = True if face_rec else False
 
-    # 3. Cek Status Absen Hari Ini
-    log_today = db.query(AttendanceLog).filter(
+    # 3. TENTUKAN ACTION STATUS (LOGIKA BARU YANG BULLETPROOF)
+    
+    # A. Cari Sesi Aktif (Sukses Masuk, TAPI Belum Pulang)
+    open_session = db.query(AttendanceLog).filter(
         AttendanceLog.user_id == user_id,
-        func.date(AttendanceLog.timestamp_attempt) == today
+        AttendanceLog.final_status == 'Success',
+        AttendanceLog.check_out_time == None
+    ).order_by(desc(AttendanceLog.timestamp_attempt)).first()
+
+    # B. Cari Sesi Selesai Hari Ini (Sukses Masuk & Sudah Pulang hari ini)
+    done_today = db.query(AttendanceLog).filter(
+        AttendanceLog.user_id == user_id,
+        func.date(AttendanceLog.timestamp_attempt) == today,
+        AttendanceLog.final_status == 'Success',
+        AttendanceLog.check_out_time != None
     ).first()
 
-    # Tentukan Action Status untuk Frontend
-    # Possible values: 'enroll', 'check_in', 'check_out', 'done'
-    action_status = 'check_in'
+    # Penentuan Tombol
+    action_status = 'check_in' # Default
 
     if not has_face:
         action_status = 'enroll'
-    elif log_today:
-        if log_today.check_out_time:
-            action_status = 'done' # Sudah pulang
-        else:
-            action_status = 'check_out' # Sudah masuk, belum pulang
+    elif open_session:
+        action_status = 'check_out' # Ada sesi gantung -> Minta Pulang
+    elif done_today:
+        action_status = 'done' # Sudah pulang hari ini -> Tidur
     else:
-        action_status = 'check_in' # Belum ada log sama sekali
+        action_status = 'check_in' # Belum ada sesi sukses -> Minta Masuk
 
     # 4. Ambil Nama Cabang & Jam Kerja (Untuk Info Card)
     nama_cabang = "-"
@@ -64,12 +77,16 @@ def get_summary():
     
     history_data = []
     for log in logs:
+        # Tambahan: Konversi UTC ke WIB untuk tampilan history di dashboard
+        check_in_wib = log.check_in_time + timedelta(hours=7) if log.check_in_time else None
+        check_out_wib = log.check_out_time + timedelta(hours=7) if log.check_out_time else None
+
         history_data.append({
-            "tanggal": log.timestamp_attempt.strftime("%Y-%m-%d"),
-            "jam_masuk": log.check_in_time.strftime("%H:%M") if log.check_in_time else "-",
-            "jam_pulang": log.check_out_time.strftime("%H:%M") if log.check_out_time else "-",
+            "tanggal": (log.timestamp_attempt + timedelta(hours=7)).strftime("%Y-%m-%d"),
+            "jam_masuk": check_in_wib.strftime("%H:%M") if check_in_wib else "-",
+            "jam_pulang": check_out_wib.strftime("%H:%M") if check_out_wib else "-",
             "status_akhir": log.final_status,
-            "keterangan": log.attendance_status or "-"
+            "keterangan": log.keterangan if log.keterangan else (log.attendance_status or "-")
         })
 
     return jsonify({
@@ -83,4 +100,3 @@ def get_summary():
         "action_status": action_status,
         "history": history_data
     }), 200
-
