@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'; // Hapus useCallback, tidak perlu ribet
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Printer } from 'lucide-react'; // Hapus Search
+import { ArrowLeft, Printer, Download } from 'lucide-react'; // Hapus Search
+
 
 export default function LaporanPage() {
   const router = useRouter();
@@ -39,6 +40,17 @@ export default function LaporanPage() {
     }
   };
 
+  // 3. Fungsi Download Excel
+  const handleExportExcel = () => {
+    // Ambil tahun dan bulan dari state filterDate (Format: YYYY-MM-DD)
+    const year = filterDate.split('-')[0];
+    const month = parseInt(filterDate.split('-')[1], 10); // Hilangkan angka 0 di depan (misal 02 jadi 2)
+
+    // Buka URL tab baru untuk trigger download otomatis dari backend
+    const url = `http://127.0.0.1:5000/admin/export/attendance?month=${month}&year=${year}`;
+    window.open(url, '_blank');
+  };
+
   // Panggil fetchReport saat komponen load atau filter berubah
   useEffect(() => {
     fetchReport();
@@ -57,9 +69,16 @@ export default function LaporanPage() {
             </button>
             <h1 className="text-xl font-bold text-gray-800">Laporan Kehadiran</h1>
           </div>
-          <button onClick={() => window.print()} className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-900 transition">
-            <Printer size={18} /> Cetak / PDF
-          </button>
+
+          {/* PERBAIKAN: DUA TOMBOL AKSI */}
+          <div className="flex items-center gap-3">
+            <button onClick={() => window.print()} className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition font-bold text-sm">
+              <Printer size={18} /> Cetak PDF
+            </button>
+            <button onClick={handleExportExcel} className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-bold text-sm shadow-md">
+              <Download size={18} /> Export Excel
+            </button>
+          </div>
         </div>
 
         {/* Filter Bar */}

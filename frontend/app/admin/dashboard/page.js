@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { 
   Users, UserCheck, Clock, AlertTriangle, LogOut, 
-  MapPin, Calendar, FileText, TrendingUp 
+  MapPin, Calendar, FileText, TrendingUp, ShieldAlert 
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -67,8 +67,9 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        {/* 2. MENU NAVIGASI UTAMA (INI YANG KURANG DI KODE ANDA) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* 2. MENU NAVIGASI UTAMA */}
+        {/* PERBAIKAN: Ubah grid-cols menjadi 5 agar muat 5 tombol, atau biarkan 4 dan biarkan turun ke baris bawah */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4"> 
           <MenuButton 
             title="Karyawan" 
             icon={<Users size={24}/>} 
@@ -92,6 +93,13 @@ export default function AdminDashboard() {
             icon={<FileText size={24}/>} 
             color="green" 
             onClick={() => router.push('/admin/reports')} 
+          />
+          {/* INI TOMBOL BARUNYA! */}
+          <MenuButton 
+            title="Log Keamanan" 
+            icon={<ShieldAlert size={24}/>} 
+            color="red" 
+            onClick={() => router.push('/admin/anomalies')} 
           />
         </div>
         
@@ -178,6 +186,7 @@ function MenuButton({ title, icon, color, onClick }) {
     orange: "bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white border-orange-200",
     purple: "bg-purple-100 text-purple-600 hover:bg-purple-600 hover:text-white border-purple-200",
     green: "bg-green-100 text-green-600 hover:bg-green-600 hover:text-white border-green-200",
+    red: "bg-red-100 text-red-600 hover:bg-red-600 hover:text-white border-red-200",
   };
 
   return (

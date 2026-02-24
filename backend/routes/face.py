@@ -232,34 +232,67 @@ def liveness_frame():
                     ok_face = False
                     msg_response = "Ditolak! Anda belum Check-Out dari sesi sebelumnya."
                 else:
-                    status_hadir = "Tepat Waktu"
-                    limit_dt = datetime.combine(today, jam_masuk_target) + timedelta(minutes=15)
-                    if current_dt > limit_dt: status_hadir = "Terlambat"
+                    # 1. Tentukan Jadwal Target
+                    target_dt = datetime.combine(today, jam_masuk_target)
+                    
+                    # 2. Tentukan Jendela Waktu (Attendance Window) berdasarkan Role
+                    if user.role == 'karyawan':
+                        batas_buka = target_dt - timedelta(minutes=60) # Buka 1 jam sebelum
+                        batas_tutup = target_dt + timedelta(hours=2)   # Tutup 2 jam setelah
+                    else: # Supervisor
+                        batas_buka = target_dt - timedelta(hours=2)    # Buka 2 jam sebelum
+                        batas_tutup = datetime.combine(today, jam_pulang_target) # Bebas selama jam kerja
 
-                    if is_in_valid_location:
-                        new_log = AttendanceLog(
-                            user_id=user_id, checkin_branch_id=detected_branch_id,
-                            check_in_time=current_dt, attendance_status=status_hadir, timestamp_attempt=current_dt,
-                            latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
-                            is_inside_geofence=True, is_liveness_passed=True, 
-                            face_similarity_score=float(score), final_status='Success',
-                            keterangan="Check-In Normal"
-                        )
-                        db.add(new_log)
-                        msg_response = f"Check-In Berhasil ({status_hadir})"
-                    else:
-                        target_branch = db.query(Branch).filter(Branch.branch_id.in_(assigned_branches)).first()
-                        target_name = target_branch.nama_cabang if target_branch else "Unknown"
-                        new_log = AttendanceLog(
-                            user_id=user_id, checkin_branch_id=assigned_branches[0] if assigned_branches else 1, check_in_time=current_dt,
-                            timestamp_attempt=current_dt, latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
-                            is_inside_geofence=False, is_liveness_passed=True, 
-                            face_similarity_score=float(score), final_status='Failure_Schedule',
-                            keterangan="Gagal Lokasi"
-                        )
-                        db.add(new_log)
-                        msg_response = f"Ditolak! Lokasi salah. Target: {target_name}"
+                    # 3. Validasi Jendela Waktu
+                    alasan_gagal = ""
+                    if current_dt < batas_buka:
                         ok_face = False
+                        msg_response = f"Ditolak! Absen baru dibuka pukul {batas_buka.strftime('%H:%M')}."
+                        alasan_gagal = "Terlalu Cepat (Di Luar Jendela Waktu)"
+                    elif current_dt > batas_tutup:
+                        ok_face = False
+                        msg_response = f"Ditolak! Batas absen masuk habis ({batas_tutup.strftime('%H:%M')})."
+                        alasan_gagal = "Terlambat Parah (Melewati Jendela Waktu)"
+                    else:
+                        # 4. Validasi Lokasi (Jika Waktu Sudah Benar)
+                        if not is_in_valid_location:
+                            ok_face = False
+                            target_branch = db.query(Branch).filter(Branch.branch_id.in_(assigned_branches)).first()
+                            target_name = target_branch.nama_cabang if target_branch else "Unknown"
+                            msg_response = f"Ditolak! Lokasi salah. Target: {target_name}"
+                            alasan_gagal = "Gagal Lokasi"
+                        else:
+                            # 5. SEMUA VALID -> PROSES ABSEN SUKSES
+                            status_hadir = "Tepat Waktu"
+                            limit_dt = target_dt + timedelta(minutes=15)
+                            if current_dt > limit_dt: status_hadir = "Terlambat"
+
+                            new_log = AttendanceLog(
+                                user_id=user_id, checkin_branch_id=detected_branch_id,
+                                check_in_time=current_dt, attendance_status=status_hadir, timestamp_attempt=current_dt,
+                                latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
+                                is_inside_geofence=True, is_liveness_passed=True, 
+                                face_similarity_score=float(score), final_status='Success',
+                                keterangan="Check-In Normal"
+                            )
+                            db.add(new_log)
+                            msg_response = f"Check-In Berhasil ({status_hadir})"
+
+                    # 6. CATAT AUDIT TRAIL JIKA GAGAL (Karena Waktu atau Lokasi)
+                    if not ok_face and alasan_gagal:
+                        new_log = AttendanceLog(
+                            user_id=user_id, 
+                            checkin_branch_id=assigned_branches[0] if assigned_branches else 1,
+                            check_in_time=current_dt, # Tetap catat jam dia mencoba absen
+                            timestamp_attempt=current_dt, 
+                            latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
+                            is_inside_geofence=is_in_valid_location, 
+                            is_liveness_passed=True, 
+                            face_similarity_score=float(score), 
+                            final_status='Failure_Schedule',
+                            keterangan=alasan_gagal # Catat alasan spesifiknya
+                        )
+                        db.add(new_log)
 
             if ok_face or "Ditolak" in msg_response:
                 db.commit()

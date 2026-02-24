@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { 
   Clock, LogOut, Building, Calendar, MapPin, 
-  Briefcase, User, ChevronRight, AlertCircle, History 
+  Briefcase, User, ChevronRight, AlertCircle, History, Award 
 } from 'lucide-react';
 import moment from 'moment';
 import 'moment/locale/id';
@@ -23,7 +23,6 @@ export default function Dashboard() {
         const token = localStorage.getItem('token');
         if (!token) { router.push('/'); return; }
 
-        // PERBAIKAN 1: URL disesuaikan dengan backend (hapus /summary)
         const res = await axios.get('http://127.0.0.1:5000/dashboard', {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -67,7 +66,8 @@ export default function Dashboard() {
     </div>
   );
 
-  const { user, history, action_status } = data;
+  // EKSTRAK DATA DARI BACKEND (TERMASUK STATS)
+  const { user, history, action_status, stats } = data;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -97,7 +97,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* === KOLOM KIRI: INFO & HISTORY === */}
+          {/* === KOLOM KIRI: INFO, STATS & HISTORY === */}
           <div className="lg:col-span-2 space-y-6">
             
             {/* Info Card */}
@@ -110,6 +110,29 @@ export default function Dashboard() {
                 <InfoItem icon={<Clock size={20} />} color="green" label="Jam Kerja" value={user.jam_kerja} />
                 <InfoItem icon={<User size={20} />} color="purple" label="Jabatan" value={user.role} />
                 <InfoItem icon={<Calendar size={20} />} color="orange" label="Tanggal Hari Ini" value={moment().format('dddd, D MMMM YYYY')} />
+              </div>
+            </div>
+
+            {/* === WIDGET BARU: PERFORMA KEHADIRAN === */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-2xl shadow-md text-white flex flex-col md:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-4 text-center md:text-left">
+                <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <Award size={32} className="text-yellow-300" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-lg mb-1">Performa Bulan Ini</h2>
+                  <p className="text-blue-100 text-sm">Rekap absensi Anda sejak awal bulan.</p>
+                </div>
+              </div>
+              <div className="flex gap-4 w-full md:w-auto">
+                <div className="bg-white/10 px-6 py-3 rounded-xl text-center backdrop-blur-md border border-white/20 flex-1 md:flex-none">
+                  <p className="text-xs text-blue-100 font-semibold uppercase tracking-wider mb-1">Hadir</p>
+                  <p className="text-3xl font-bold">{stats?.total_hadir || 0} <span className="text-sm font-normal text-blue-100">Hari</span></p>
+                </div>
+                <div className="bg-white/10 px-6 py-3 rounded-xl text-center backdrop-blur-md border border-white/20 flex-1 md:flex-none">
+                  <p className="text-xs text-blue-100 font-semibold uppercase tracking-wider mb-1">Terlambat</p>
+                  <p className="text-3xl font-bold text-yellow-300">{stats?.total_telat || 0} <span className="text-sm font-normal text-blue-100">Kali</span></p>
+                </div>
               </div>
             </div>
 
@@ -153,7 +176,8 @@ export default function Dashboard() {
                           </td>
                           <td className="p-3">
                             <span className={`text-xs font-bold ${
-                              log.keterangan === 'Tepat Waktu' ? 'text-green-600' : 'text-red-500'
+                              log.keterangan === 'Tepat Waktu' ? 'text-green-600' : 
+                              log.keterangan === 'Terlambat' ? 'text-orange-500' : 'text-gray-600'
                             }`}>
                               {log.keterangan}
                             </span>
@@ -227,7 +251,6 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* PERBAIKAN 2: TOMBOL RIWAYAT LENGKAP (Secondary Button) */}
                 <div className="mt-8 pt-6 border-t border-gray-100">
                   <button 
                     onClick={() => router.push('/riwayat')}
@@ -240,7 +263,7 @@ export default function Dashboard() {
               </div>
               
               <div className="mt-6 text-center text-gray-400 text-xs">
-                &copy; 2025 ArcFace Presence System
+                &copy; 2026 ArcFace Presence System
               </div>
             </div>
           </div>
