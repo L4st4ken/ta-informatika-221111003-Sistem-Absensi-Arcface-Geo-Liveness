@@ -8,6 +8,8 @@ from werkzeug.security import generate_password_hash
 from functools import wraps
 from datetime import date, datetime, timedelta
 import pandas as pd
+import calendar
+from openpyxl.utils import get_column_letter
 from io import BytesIO
 
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
@@ -258,33 +260,45 @@ def delete_branch(branch_id):
 @admin_required
 def get_attendance_reports():
     db: Session = next(get_db())
-    filter_date = request.args.get('date')
+    
+    # 1. Ambil Parameter Bulan dan Tahun (Sama seperti Excel)
+    sekarang = datetime.utcnow() + timedelta(hours=7)
+    filter_month = request.args.get('month', sekarang.month, type=int)
+    filter_year = request.args.get('year', sekarang.year, type=int)
     filter_branch = request.args.get('branch_id')
     
     query = db.query(AttendanceLog).join(User).order_by(desc(AttendanceLog.timestamp_attempt))
     
-    if filter_date:
-        query = query.filter(func.date(AttendanceLog.timestamp_attempt) == filter_date)
-    else:
-        query = query.filter(func.date(AttendanceLog.timestamp_attempt) == date.today())
+    # 2. Filter berdasarkan Bulan & Tahun
+    query = query.filter(
+        extract('month', AttendanceLog.timestamp_attempt) == filter_month,
+        extract('year', AttendanceLog.timestamp_attempt) == filter_year
+    )
         
+    # 3. Filter Cabang (Jika Dipilih)
     if filter_branch:
         query = query.filter(AttendanceLog.checkin_branch_id == filter_branch)
 
     logs = query.all()
     report_data = []
+    
     for log in logs:
         durasi = "-"
         if log.check_in_time and log.check_out_time:
             delta = log.check_out_time - log.check_in_time
             durasi = str(delta).split('.')[0] 
             
+        # Perbaikan waktu ke WIB untuk tampilan JSON
+        check_in_wib = log.check_in_time + timedelta(hours=7) if log.check_in_time else None
+        check_out_wib = log.check_out_time + timedelta(hours=7) if log.check_out_time else None
+            
         report_data.append({
+            "tanggal": (log.timestamp_attempt + timedelta(hours=7)).strftime("%Y-%m-%d"),
             "nama_karyawan": log.user.nama_lengkap,
             "role": log.user.role,
             "cabang": log.checkin_branch.nama_cabang if log.checkin_branch else "-",
-            "jam_masuk": log.check_in_time.strftime("%H:%M") if log.check_in_time else "-",
-            "jam_pulang": log.check_out_time.strftime("%H:%M") if log.check_out_time else "-",
+            "jam_masuk": check_in_wib.strftime("%H:%M") if check_in_wib else "-",
+            "jam_pulang": check_out_wib.strftime("%H:%M") if check_out_wib else "-",
             "durasi_kerja": durasi,
             "status_kehadiran": log.attendance_status,
             "skor_wajah": f"{log.face_similarity_score:.2f}",
@@ -296,13 +310,16 @@ def get_attendance_reports():
 # ==========================================
 # --- FITUR BARU: EXPORT EXCEL UNTUK HRD ---
 # ==========================================
+# ==========================================
+# --- FITUR EXPORT EXCEL (FORMAT MATRIKS BULANAN) ---
+# ==========================================
 @admin_bp.route('/export/attendance', methods=['GET'])
-# @jwt_required()  # Aktifkan jika frontend admin sudah bisa handle token untuk download
+# @jwt_required()
 # @admin_required
 def export_attendance():
     """
-    Endpoint untuk mendownload Laporan Absensi ke format Excel (.xlsx).
-    Filter URL: /admin/export/attendance?month=2&year=2026
+    Endpoint untuk mendownload Laporan Absensi format Matriks (Pivot).
+    Satu baris per karyawan, kolom berisi tanggal 1-30/31, plus rekap total.
     """
     db = next(get_db())
     
@@ -311,57 +328,111 @@ def export_attendance():
     bulan_target = request.args.get('month', sekarang.month, type=int)
     tahun_target = request.args.get('year', sekarang.year, type=int)
 
-    # 2. Query Data
-    logs = db.query(AttendanceLog, User, Branch).join(
-        User, AttendanceLog.user_id == User.user_id
-    ).outerjoin(
-        Branch, AttendanceLog.checkin_branch_id == Branch.branch_id
-    ).filter(
-        extract('month', AttendanceLog.check_in_time) == bulan_target,
-        extract('year', AttendanceLog.check_in_time) == tahun_target
-    ).order_by(
-        desc(AttendanceLog.check_in_time)
+    # 2. Tentukan Rentang Hari dalam Bulan
+    _, num_days = calendar.monthrange(tahun_target, bulan_target)
+
+    # 3. Ambil Semua Karyawan & Log Absensinya
+    all_users = db.query(User).filter(User.role != 'admin').all()
+    if not all_users:
+        return jsonify({"msg": "Belum ada data karyawan di sistem."}), 404
+
+    logs = db.query(AttendanceLog).filter(
+        extract('month', AttendanceLog.timestamp_attempt) == bulan_target,
+        extract('year', AttendanceLog.timestamp_attempt) == tahun_target
     ).all()
 
-    if not logs:
-        return jsonify({"msg": f"Tidak ada data absensi untuk bulan {bulan_target}-{tahun_target}"}), 404
+    # 4. Petakan Log ke dalam Dictionary: {(user_id, tanggal): log}
+    logs_dict = {}
+    for log in logs:
+        log_date = (log.timestamp_attempt + timedelta(hours=7)).date()
+        key = (log.user_id, log_date.day)
+        
+        # Jika karyawan absen berkali-kali di hari yang sama, prioritaskan yang Success
+        if key not in logs_dict or log.final_status == 'Success':
+            logs_dict[key] = log
 
-    # 3. Format Data untuk Excel
+    # 5. Bangun Matriks Data
     data_excel = []
-    for log, user, branch in logs:
-        check_in_wib = log.check_in_time + timedelta(hours=7) if log.check_in_time else None
-        check_out_wib = log.check_out_time + timedelta(hours=7) if log.check_out_time else None
-
-        durasi = "-"
-        if check_in_wib and check_out_wib:
-            delta = check_out_wib - check_in_wib
-            durasi = str(delta).split('.')[0]
-
-        data_excel.append({
-            "Tanggal": check_in_wib.strftime("%Y-%m-%d") if check_in_wib else "-",
+    
+    for user in all_users:
+        row_data = {
             "Nama Karyawan": user.nama_lengkap,
             "Jabatan": user.role.capitalize(),
-            "Cabang Absen": branch.nama_cabang if branch else "Unknown",
-            "Jam Masuk": check_in_wib.strftime("%H:%M") if check_in_wib else "-",
-            "Jam Pulang": check_out_wib.strftime("%H:%M") if check_out_wib else "-",
-            "Durasi Kerja": durasi,
-            "Status Kehadiran": log.attendance_status,
-            "Keterangan": log.keterangan if log.keterangan else "-",
-            "Status Sistem": "Valid" if log.final_status == "Success" else "Ditolak / Gagal"
-        })
+            "Cabang Utama": user.branch.nama_cabang if user.branch else "-"
+        }
+        
+        # Siapkan Counter Rekapitulasi
+        total_hadir = 0
+        total_telat = 0
+        total_alpha = 0
+        total_gagal = 0
+        
+        # Loop dari tanggal 1 sampai akhir bulan
+        for day in range(1, num_days + 1):
+            current_date = date(tahun_target, bulan_target, day)
+            is_weekend = current_date.weekday() >= 5 # 5=Sabtu, 6=Minggu
+            
+            key = (user.user_id, day)
+            status_teks = ""
+            
+            if key in logs_dict:
+                log = logs_dict[key]
+                if log.final_status == 'Success':
+                    if log.attendance_status == 'Terlambat':
+                        status_teks = "Telat"
+                        total_telat += 1
+                        total_hadir += 1 # Telat tetap dihitung masuk kerja
+                    else:
+                        status_teks = "Hadir"
+                        total_hadir += 1
+                else:
+                    status_teks = "Gagal"
+                    total_gagal += 1
+            else:
+                # Jika tidak ada log absensi
+                if current_date > sekarang.date():
+                    status_teks = "-" # Hari belum terjadi (masa depan)
+                elif is_weekend:
+                    status_teks = "Libur"
+                else:
+                    status_teks = "Alpha"
+                    total_alpha += 1
+                    
+            # Masukkan status ke kolom tanggal (Tgl 1, Tgl 2, dst)
+            row_data[f"Tgl {day}"] = status_teks
+            
+        # Tambahkan Kolom Summary di Ujung Kanan
+        row_data["Total Hadir"] = total_hadir
+        row_data["Total Telat"] = total_telat
+        row_data["Total Alpha"] = total_alpha
+        row_data["Total Gagal"] = total_gagal
+        
+        data_excel.append(row_data)
 
-    # 4. Convert ke Excel via Pandas
+    # 6. Convert ke Excel
     df = pd.DataFrame(data_excel)
+    # Urutkan berdasarkan Nama Karyawan A-Z
+    df.sort_values(by=['Nama Karyawan'], ascending=[True], inplace=True)
+
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Laporan Absensi')
-        worksheet = writer.sheets['Laporan Absensi']
+        df.to_excel(writer, index=False, sheet_name='Rekap Matriks')
+        worksheet = writer.sheets['Rekap Matriks']
+        
+        # Fitur UX Keren: Kunci kolom (Freeze Panes) agar nama tidak hilang saat di-scroll ke kanan
+        worksheet.freeze_panes = 'D2' 
+        
+        # Sesuaikan lebar kolom otomatis
         for idx, col in enumerate(df.columns):
-            max_len = max(df[col].astype(str).map(len).max(), len(col)) + 2
-            worksheet.column_dimensions[chr(65 + idx)].width = max_len
+            column_letter = get_column_letter(idx + 1)
+            if col.startswith("Tgl"):
+                worksheet.column_dimensions[column_letter].width = 6 # Kolom tanggal dirampingkan
+            else:
+                max_len = max(df[col].astype(str).map(len).max(), len(col)) + 2
+                worksheet.column_dimensions[column_letter].width = max_len
 
     output.seek(0)
-    nama_file = f"Laporan_Absensi_HRD_{tahun_target}_{bulan_target:02d}.xlsx"
+    nama_file = f"Rekap_Matriks_HRD_{tahun_target}_{bulan_target:02d}.xlsx"
     
     return send_file(
         output,

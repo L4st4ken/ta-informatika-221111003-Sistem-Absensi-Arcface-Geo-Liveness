@@ -25,31 +25,45 @@ def get_summary():
     face_rec = db.query(FaceEmbedding).filter_by(user_id=user_id).first()
     has_face = True if face_rec else False
 
-    # 3. TENTUKAN ACTION STATUS (BULLETPROOF)
+    # 3. TENTUKAN ACTION STATUS (LOGIKA JADWAL DINAMIS)
+    
+    # A. Cek apakah ada sesi gantung (Belum Pulang)
     open_session = db.query(AttendanceLog).filter(
         AttendanceLog.user_id == user_id,
         AttendanceLog.final_status == 'Success',
         AttendanceLog.check_out_time == None
     ).order_by(desc(AttendanceLog.timestamp_attempt)).first()
 
-    done_today = db.query(AttendanceLog).filter(
+    # B. Hitung berapa kali user SUDAH SELESAI (Masuk & Pulang) hari ini
+    completed_sessions_count = db.query(AttendanceLog).filter(
         AttendanceLog.user_id == user_id,
         func.date(AttendanceLog.timestamp_attempt) == today,
         AttendanceLog.final_status == 'Success',
         AttendanceLog.check_out_time != None
-    ).first()
+    ).count()
 
-    action_status = 'check_in'
+    # C. Cek TARGET jumlah kunjungan / shift hari ini
+    todays_schedules_count = db.query(Schedule).filter_by(
+        user_id=user_id, tanggal=today, is_active=True
+    ).count()
+    
+    # Jika tidak ada jadwal khusus di tabel Schedule, asumsikan ikut Shift reguler (Target = 1 kali)
+    expected_sessions = todays_schedules_count if todays_schedules_count > 0 else 1
+
+    # D. EKSEKUSI LOGIKA
+    action_status = 'check_in' # Default
 
     if not has_face:
         action_status = 'enroll'
     elif open_session:
+        # Ada sesi gantung -> Wajib Pulang dulu
         action_status = 'check_out'
-    # PERBAIKAN: Hanya Karyawan yang dikunci jadi 'done' setelah 1x pulang.
-    # Supervisor akan dikembalikan ke 'check_in' untuk kunjungan cabang berikutnya.
-    elif done_today and user.role == 'karyawan':
+    elif completed_sessions_count >= expected_sessions:
+        # INI KUNCI DARI IDE ANDA!
+        # Berlaku untuk Karyawan & Supervisor. Jika target sesi sudah terpenuhi -> DONE
         action_status = 'done'
     else:
+        # Sesi selesai < Target sesi (Misal target 2 cabang, baru selesai 1) -> Boleh Masuk Lagi
         action_status = 'check_in'
 
     # 4. Ambil Nama Cabang & Jam Kerja
