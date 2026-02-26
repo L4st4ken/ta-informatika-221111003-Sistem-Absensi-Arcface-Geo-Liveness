@@ -2,8 +2,9 @@ from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from database.connection import get_db
 from models.models import User, AttendanceLog, FaceEmbedding, Schedule, Branch, Shift
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, extract
 from datetime import datetime, timedelta, date
+
 
 dashboard_bp = Blueprint('dashboard_bp', __name__, url_prefix='/dashboard')
 
@@ -80,24 +81,45 @@ def get_summary():
         if user.branch: nama_cabang = user.branch.nama_cabang
 
     # ==========================================
-    # 5. FITUR BARU: STATISTIK KEHADIRAN BULAN INI
+    # 5. FITUR BARU: STATISTIK KEHADIRAN BULAN INI (DENGAN ALPHA CERDAS)
     # ==========================================
-    first_day_of_month = today.replace(day=1)
+    tahun = today.year
+    bulan = today.month
+    hari_ini = today.day
 
-    # Hitung total hari masuk (hanya yang final_status-nya Success)
-    total_hadir = db.query(AttendanceLog).filter(
-        AttendanceLog.user_id == user_id,
-        func.date(AttendanceLog.check_in_time) >= first_day_of_month,
-        AttendanceLog.final_status == 'Success'
-    ).count()
+    # A. Hitung Total Hari Kerja (Senin - Jumat) dari tanggal 1 sampai HARI INI
+    working_days_passed = 0
+    for day in range(1, hari_ini + 1):
+        if date(tahun, bulan, day).weekday() < 5:  # 0=Senin, 4=Jumat
+            working_days_passed += 1
 
-    # Hitung total telat bulan ini
-    total_telat = db.query(AttendanceLog).filter(
+    # B. Ambil semua log absen SUKSES milik user ini di bulan ini
+    logs_sebulan = db.query(AttendanceLog).filter(
         AttendanceLog.user_id == user_id,
-        func.date(AttendanceLog.check_in_time) >= first_day_of_month,
-        AttendanceLog.attendance_status == 'Terlambat',
+        extract('month', AttendanceLog.timestamp_attempt) == bulan,
+        extract('year', AttendanceLog.timestamp_attempt) == tahun,
         AttendanceLog.final_status == 'Success'
-    ).count()
+    ).all()
+
+    # C. Rekapitulasi (Gunakan Set agar absen berkali-kali di hari yang sama dihitung 1 kali Hadir)
+    attended_days = set()
+    total_telat = 0
+
+    for log in logs_sebulan:
+        if log.check_in_time:
+            log_date = log.check_in_time.date()
+            if log_date not in attended_days:
+                attended_days.add(log_date)
+                # Hanya hitung telat pada absen pertama di hari itu
+                if log.attendance_status == 'Terlambat':
+                    total_telat += 1
+
+    total_hadir = len(attended_days)
+
+    # D. Kalkulasi Alpha
+    total_alpha = working_days_passed - total_hadir
+    if total_alpha < 0: 
+        total_alpha = 0
 
     # 6. Ambil Riwayat 5 Terakhir
     logs = db.query(AttendanceLog).filter_by(user_id=user_id)\
@@ -106,7 +128,6 @@ def get_summary():
     
     history_data = []
     for log in logs:
-        # PERBAIKAN: Hapus timedelta(hours=7) karena data di DB sudah WIB (disimpan via face.py)
         check_in_str = log.check_in_time.strftime("%H:%M") if log.check_in_time else "-"
         check_out_str = log.check_out_time.strftime("%H:%M") if log.check_out_time else "-"
 
@@ -128,7 +149,8 @@ def get_summary():
         },
         "stats": {
             "total_hadir": total_hadir,
-            "total_telat": total_telat
+            "total_telat": total_telat,
+            "total_alpha": total_alpha # <-- Alpha masuk ke sini!
         },
         "action_status": action_status,
         "history": history_data

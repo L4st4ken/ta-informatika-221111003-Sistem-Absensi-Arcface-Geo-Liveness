@@ -261,50 +261,105 @@ def delete_branch(branch_id):
 def get_attendance_reports():
     db: Session = next(get_db())
     
-    # 1. Ambil Parameter Bulan dan Tahun (Sama seperti Excel)
+    # 1. Ambil Parameter Filter
     sekarang = datetime.utcnow() + timedelta(hours=7)
     filter_month = request.args.get('month', sekarang.month, type=int)
     filter_year = request.args.get('year', sekarang.year, type=int)
     filter_branch = request.args.get('branch_id')
     
-    query = db.query(AttendanceLog).join(User).order_by(desc(AttendanceLog.timestamp_attempt))
-    
-    # 2. Filter berdasarkan Bulan & Tahun
-    query = query.filter(
+    # 2. Tentukan Rentang Hari
+    _, num_days = calendar.monthrange(filter_year, filter_month)
+    if filter_year == sekarang.year and filter_month == sekarang.month:
+        end_day = sekarang.day # Stop di hari ini jika bulan berjalan
+    else:
+        end_day = num_days
+
+    # 3. Ambil Semua User Kecuali Admin
+    all_users = db.query(User).filter(User.role != 'admin').all()
+
+    # 4. Ambil Log Absensi Bulan Tersebut
+    logs = db.query(AttendanceLog).filter(
         extract('month', AttendanceLog.timestamp_attempt) == filter_month,
         extract('year', AttendanceLog.timestamp_attempt) == filter_year
-    )
-        
-    # 3. Filter Cabang (Jika Dipilih)
-    if filter_branch:
-        query = query.filter(AttendanceLog.checkin_branch_id == filter_branch)
+    ).all()
 
-    logs = query.all()
-    report_data = []
-    
+    # Kelompokkan Log
+    logs_dict = {}
     for log in logs:
-        durasi = "-"
-        if log.check_in_time and log.check_out_time:
-            delta = log.check_out_time - log.check_in_time
-            durasi = str(delta).split('.')[0] 
-            
-        # Perbaikan waktu ke WIB untuk tampilan JSON
-        check_in_wib = log.check_in_time + timedelta(hours=7) if log.check_in_time else None
-        check_out_wib = log.check_out_time + timedelta(hours=7) if log.check_out_time else None
-            
-        report_data.append({
-            "tanggal": (log.timestamp_attempt + timedelta(hours=7)).strftime("%Y-%m-%d"),
-            "nama_karyawan": log.user.nama_lengkap,
-            "role": log.user.role,
-            "cabang": log.checkin_branch.nama_cabang if log.checkin_branch else "-",
-            "jam_masuk": check_in_wib.strftime("%H:%M") if check_in_wib else "-",
-            "jam_pulang": check_out_wib.strftime("%H:%M") if check_out_wib else "-",
-            "durasi_kerja": durasi,
-            "status_kehadiran": log.attendance_status,
-            "skor_wajah": f"{log.face_similarity_score:.2f}",
-            "status_akhir": log.final_status
-        })
+        log_date = (log.timestamp_attempt + timedelta(hours=7)).date()
+        key = (log.user_id, log_date)
+        if key not in logs_dict:
+            logs_dict[key] = []
+        logs_dict[key].append(log)
+
+    report_data = []
+
+    # 5. CROSS-CHECK UNTUK TAMPILAN WEB
+    for day in range(1, end_day + 1):
+        current_date = date(filter_year, filter_month, day)
+        is_weekend = current_date.weekday() >= 5
         
+        for user in all_users:
+            # Jika admin memfilter cabang, kita abaikan Karyawan Alpha yang bukan dari cabang tersebut
+            if filter_branch and str(user.branch_id) != str(filter_branch):
+                continue
+                
+            key = (user.user_id, current_date)
+            
+            # A. Jika ada log absensi
+            if key in logs_dict:
+                for log in logs_dict[key]:
+                    # Filter by branch untuk log
+                    if filter_branch and str(log.checkin_branch_id) != str(filter_branch):
+                        continue
+                        
+                    check_in_wib = log.check_in_time + timedelta(hours=7) if log.check_in_time else None
+                    check_out_wib = log.check_out_time + timedelta(hours=7) if log.check_out_time else None
+                    
+                    durasi = "-"
+                    if check_in_wib and check_out_wib:
+                        delta = check_out_wib - check_in_wib
+                        durasi = str(delta).split('.')[0]
+                        
+                    report_data.append({
+                        "tanggal": current_date.strftime("%Y-%m-%d"),
+                        "nama_karyawan": user.nama_lengkap,
+                        "role": user.role,
+                        "cabang": log.checkin_branch.nama_cabang if log.checkin_branch else "-",
+                        "jam_masuk": check_in_wib.strftime("%H:%M") if check_in_wib else "-",
+                        "jam_pulang": check_out_wib.strftime("%H:%M") if check_out_wib else "-",
+                        "durasi_kerja": durasi,
+                        "status_kehadiran": log.attendance_status,
+                        "skor_wajah": f"{log.face_similarity_score:.2f}",
+                        "status_akhir": log.final_status,
+                        "sort_date": current_date # Hidden field untuk sorting
+                    })
+            
+            # B. Jika TIDAK ADA log absensi (Alpha / Libur)
+            else:
+                status_kehadiran = "Libur" if is_weekend else "Alpha"
+                
+                report_data.append({
+                    "tanggal": current_date.strftime("%Y-%m-%d"),
+                    "nama_karyawan": user.nama_lengkap,
+                    "role": user.role,
+                    "cabang": user.branch.nama_cabang if user.branch else "-",
+                    "jam_masuk": "-",
+                    "jam_pulang": "-",
+                    "durasi_kerja": "-",
+                    "status_kehadiran": status_kehadiran,
+                    "skor_wajah": "-",
+                    "status_akhir": "Alpha" if not is_weekend else "Libur", # Status spesial
+                    "sort_date": current_date
+                })
+
+    # 6. Urutkan berdasarkan tanggal terbaru ke terlama
+    report_data.sort(key=lambda x: x["sort_date"], reverse=True)
+    
+    # Hapus field pembantu sebelum dikirim ke Frontend
+    for r in report_data:
+        del r["sort_date"]
+
     return jsonify(report_data), 200
 
 # ==========================================

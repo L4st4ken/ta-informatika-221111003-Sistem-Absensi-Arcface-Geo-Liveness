@@ -112,6 +112,36 @@ export default function Dashboard() {
                 <InfoItem icon={<Calendar size={20} />} color="orange" label="Tanggal Hari Ini" value={moment().format('dddd, D MMMM YYYY')} />
               </div>
             </div>
+            
+            {/* ========================================== */}
+            {/* FITUR BARU: STATISTIK BULANAN (SEMUA ROLE) */}
+            {/* ========================================== */}
+            {data.stats && (
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
+                <h3 className="text-sm font-bold text-gray-700 mb-3">Rekap Kehadiran Bulan Ini</h3>
+                <div className="grid grid-cols-3 gap-3 text-center">
+              
+                  {/* Kotak Hadir */}
+                  <div className="bg-green-50 p-3 rounded-xl border border-green-100">
+                    <p className="text-2xl font-black text-green-600">{data.stats.total_hadir}</p>
+                    <p className="text-[10px] font-bold text-green-800 uppercase mt-1">Hadir</p>
+                  </div>
+
+                  {/* Kotak Telat */}
+                  <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+                    <p className="text-2xl font-black text-orange-600">{data.stats.total_telat}</p>
+                    <p className="text-[10px] font-bold text-orange-800 uppercase mt-1">Telat</p>
+                  </div>
+
+                  {/* Kotak Alpha */}
+                  <div className="bg-red-50 p-3 rounded-xl border border-red-100">
+                    <p className="text-2xl font-black text-red-600">{data.stats.total_alpha}</p>
+                    <p className="text-[10px] font-bold text-red-800 uppercase mt-1">Alpha</p>
+                  </div>
+
+                </div>
+              </div>
+              )}
 
             {/* === WIDGET BARU: PERFORMA KEHADIRAN === */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 rounded-2xl shadow-md text-white flex flex-col md:flex-row justify-between items-center gap-4">

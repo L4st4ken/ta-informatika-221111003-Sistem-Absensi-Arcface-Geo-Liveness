@@ -163,19 +163,29 @@ export default function LaporanPage() {
                       <td className="p-4 text-green-600 font-mono font-bold">{r.jam_masuk}</td>
                       <td className="p-4 text-orange-600 font-mono font-bold">{r.jam_pulang}</td>
                       <td className="p-4 font-mono text-gray-600">{r.durasi_kerja}</td>
+                      {/* KOLOM STATUS KEHADIRAN */}
                       <td className="p-4">
                         <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${
                           r.status_kehadiran === 'Tepat Waktu' ? 'bg-green-100 text-green-700' : 
-                          r.status_kehadiran === 'Terlambat' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
+                          r.status_kehadiran === 'Terlambat' ? 'bg-orange-100 text-orange-700' : 
+                          r.status_kehadiran === 'Libur' ? 'bg-gray-100 text-gray-700' : 
+                          'bg-red-100 text-red-700' // Untuk Alpha atau Gagal
                         }`}>
                           {r.status_kehadiran || 'Gagal'}
                         </span>
                       </td>
+
+                      {/* KOLOM VALIDITAS / STATUS AKHIR */}
                       <td className="p-4 text-center">
                          <span className={`px-2 py-1 rounded-full text-[10px] uppercase font-bold tracking-wider ${
-                           r.status_akhir === 'Success' ? 'text-green-600 border border-green-200' : 'text-red-600 border border-red-200'
+                           r.status_akhir === 'Success' ? 'text-green-600 border border-green-200' : 
+                           r.status_akhir === 'Libur' ? 'text-gray-500 border border-gray-200' : 
+                           r.status_akhir === 'Alpha' ? 'text-red-600 border border-red-200' : 
+                           'text-red-600 border border-red-200'
                          }`}>
-                           {r.status_akhir === 'Success' ? '✓ Valid' : '✗ Invalid'}
+                           {r.status_akhir === 'Success' ? '✓ Valid' : 
+                            r.status_akhir === 'Libur' ? 'Libur' : 
+                            r.status_akhir === 'Alpha' ? '⚠ Alpha' : '✗ Invalid'}
                          </span>
                       </td>
                     </tr>
