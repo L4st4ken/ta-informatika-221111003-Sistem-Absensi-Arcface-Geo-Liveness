@@ -28,8 +28,8 @@ def history():
     history_data = []
     for log in logs:
         # Konversi UTC ke WIB (+7) untuk tampilan
-        check_in_wib = log.check_in_time + timedelta(hours=7) if log.check_in_time else None
-        check_out_wib = log.check_out_time + timedelta(hours=7) if log.check_out_time else None
+        check_in_wib = log.check_in_time if log.check_in_time else None
+        check_out_wib = log.check_out_time if log.check_out_time else None
         
         # Hitung Durasi Kerja
         durasi = "-"

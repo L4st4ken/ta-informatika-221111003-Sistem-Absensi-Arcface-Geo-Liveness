@@ -167,7 +167,8 @@ export default function LaporanPage() {
                       <td className="p-4">
                         <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${
                           r.status_kehadiran === 'Tepat Waktu' ? 'bg-green-100 text-green-700' : 
-                          r.status_kehadiran === 'Terlambat' ? 'bg-orange-100 text-orange-700' : 
+                          r.status_kehadiran === 'Terlambat' ? 'bg-orange-100 text-orange-700' :
+                          r.status_kehadiran === 'Lupa Pulang' ? 'bg-yellow-100 text-yellow-800' : 
                           r.status_kehadiran === 'Libur' ? 'bg-gray-100 text-gray-700' : 
                           'bg-red-100 text-red-700' // Untuk Alpha atau Gagal
                         }`}>

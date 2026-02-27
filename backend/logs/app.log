@@ -1416,3 +1416,435 @@
 [2026-02-26 08:34:59,902] INFO in app: Registered blueprint: admin_bp -> /admin
 [2026-02-26 08:34:59,903] INFO in app: Registered blueprint: face_bp -> /face
 [2026-02-26 08:34:59,903] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-26 18:19:34,407] INFO in app: OK Logging initialized.
+[2026-02-26 18:19:34,584] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-26 18:19:34,588] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-26 18:19:34,589] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-26 18:19:34,594] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-26 18:19:34,604] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-26 18:19:34,606] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-26 18:19:34,607] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-26 18:19:40,223] INFO in app: OK Logging initialized.
+[2026-02-26 18:19:40,340] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-26 18:19:40,348] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-26 18:19:40,350] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-26 18:19:40,355] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-26 18:19:40,369] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-26 18:19:40,372] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-26 18:19:40,376] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 06:37:44,381] INFO in app: OK Logging initialized.
+[2026-02-27 06:37:44,476] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 06:37:44,491] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 06:37:44,491] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 06:37:44,491] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 06:37:44,491] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 06:37:44,491] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 06:37:44,499] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 06:37:48,676] INFO in app: OK Logging initialized.
+[2026-02-27 06:37:48,741] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 06:37:48,743] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 06:37:48,744] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 06:37:48,746] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 06:37:48,751] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 06:37:48,752] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 06:37:48,753] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 06:38:22,039] INFO in app: OK Logging initialized.
+[2026-02-27 06:38:22,101] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 06:38:22,103] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 06:38:22,103] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 06:38:22,106] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 06:38:22,110] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 06:38:22,111] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 06:38:22,112] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 06:38:25,175] INFO in app: OK Logging initialized.
+[2026-02-27 06:38:25,228] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 06:38:25,231] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 06:38:25,232] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 06:38:25,234] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 06:38:25,239] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 06:38:25,240] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 06:38:25,241] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 07:41:22,220] INFO in app: OK Logging initialized.
+[2026-02-27 07:41:22,337] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 07:41:22,337] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 07:41:22,337] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 07:41:22,337] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 07:41:22,347] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 07:41:22,347] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 07:41:22,349] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 07:41:27,287] INFO in app: OK Logging initialized.
+[2026-02-27 07:41:27,337] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 07:41:27,337] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 07:41:27,337] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 07:41:27,337] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 07:41:27,347] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 07:41:27,347] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 07:41:27,357] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 07:41:58,252] INFO in app: OK Logging initialized.
+[2026-02-27 07:41:58,327] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 07:41:58,337] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 07:41:58,337] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 07:41:58,344] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 07:41:58,351] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 07:41:58,353] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 07:41:58,354] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 07:42:01,792] INFO in app: OK Logging initialized.
+[2026-02-27 07:42:01,853] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 07:42:01,857] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 07:42:01,857] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 07:42:01,857] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 07:42:01,865] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 07:42:01,867] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 07:42:01,867] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 09:23:33,829] INFO in app: OK Logging initialized.
+[2026-02-27 09:23:33,887] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 09:23:33,890] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 09:23:33,891] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 09:23:33,891] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 09:23:33,899] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 09:23:33,900] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 09:23:33,900] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 09:23:35,971] INFO in app: OK Logging initialized.
+[2026-02-27 09:23:36,022] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 09:23:36,024] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 09:23:36,025] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 09:23:36,026] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 09:23:36,029] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 09:23:36,029] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 09:23:36,030] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 23:18:51,628] INFO in app: OK Logging initialized.
+[2026-02-27 23:18:51,762] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 23:18:51,763] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 23:18:51,763] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 23:18:51,763] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 23:18:51,773] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 23:18:51,775] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 23:18:51,776] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 23:18:56,092] INFO in app: OK Logging initialized.
+[2026-02-27 23:18:56,243] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 23:18:56,247] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 23:18:56,249] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 23:18:56,253] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 23:18:56,262] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 23:18:56,264] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 23:18:56,265] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 23:52:02,801] INFO in app: OK Logging initialized.
+[2026-02-27 23:52:02,856] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 23:52:02,858] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 23:52:02,859] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 23:52:02,863] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 23:52:02,867] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 23:52:02,868] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 23:52:02,869] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-27 23:52:06,237] INFO in app: OK Logging initialized.
+[2026-02-27 23:52:06,304] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-27 23:52:06,308] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-27 23:52:06,310] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-27 23:52:06,312] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-27 23:52:06,317] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-27 23:52:06,318] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-27 23:52:06,320] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:15:19,288] INFO in app: OK Logging initialized.
+[2026-02-28 00:15:19,358] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:15:19,361] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:15:19,362] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:15:19,364] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:15:19,371] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:15:19,372] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:15:19,373] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:15:23,336] INFO in app: OK Logging initialized.
+[2026-02-28 00:15:23,404] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:15:23,420] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:15:23,420] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:15:23,433] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:15:23,438] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:15:23,446] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:15:23,447] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:22:04,727] INFO in app: OK Logging initialized.
+[2026-02-28 00:22:04,791] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:22:04,791] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:22:04,807] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:22:04,811] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:22:04,819] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:22:04,821] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:22:04,822] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:22:34,381] INFO in app: OK Logging initialized.
+[2026-02-28 00:22:34,439] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:22:34,441] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:22:34,441] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:22:34,443] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:22:34,449] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:22:34,451] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:22:34,452] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:22:38,193] INFO in app: OK Logging initialized.
+[2026-02-28 00:22:38,297] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:22:38,301] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:22:38,302] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:22:38,305] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:22:38,314] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:22:38,317] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:22:38,318] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:23:09,334] INFO in app: OK Logging initialized.
+[2026-02-28 00:23:09,402] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:23:09,405] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:23:09,407] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:23:09,410] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:23:09,414] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:23:09,416] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:23:09,417] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:23:58,331] INFO in app: OK Logging initialized.
+[2026-02-28 00:23:58,381] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:23:58,381] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:23:58,381] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:23:58,394] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:23:58,398] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:23:58,403] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:23:58,404] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:24:33,218] INFO in app: OK Logging initialized.
+[2026-02-28 00:24:33,302] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:24:33,302] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:24:33,302] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:24:33,302] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:24:33,320] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:24:33,320] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:24:33,320] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:31:33,666] INFO in app: OK Logging initialized.
+[2026-02-28 00:31:33,739] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:31:33,739] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:31:33,739] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:31:33,751] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:31:33,758] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:31:33,760] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:31:33,761] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:31:37,154] INFO in app: OK Logging initialized.
+[2026-02-28 00:31:37,218] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:31:37,218] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:31:37,218] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:31:37,218] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:31:37,229] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:31:37,230] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:31:37,231] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:32:54,014] INFO in app: OK Logging initialized.
+[2026-02-28 00:32:54,088] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:32:54,088] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:32:54,088] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:32:54,103] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:32:54,108] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:32:54,110] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:32:54,111] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:33:04,727] INFO in app: OK Logging initialized.
+[2026-02-28 00:33:04,779] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:33:04,779] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:33:04,779] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:33:04,793] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:33:04,800] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:33:04,802] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:33:04,803] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:33:14,520] INFO in app: OK Logging initialized.
+[2026-02-28 00:33:14,587] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:33:14,589] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:33:14,589] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:33:14,589] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:33:14,597] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:33:14,598] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:33:14,599] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:33:17,902] INFO in app: OK Logging initialized.
+[2026-02-28 00:33:17,968] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:33:17,985] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:33:17,985] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:33:17,989] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:33:17,992] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:33:17,992] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:33:17,998] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:33:32,384] INFO in app: OK Logging initialized.
+[2026-02-28 00:33:32,455] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:33:32,456] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:33:32,456] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:33:32,456] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:33:32,469] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:33:32,469] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:33:32,469] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:36:47,566] INFO in app: OK Logging initialized.
+[2026-02-28 00:36:47,629] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:36:47,629] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:36:47,629] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:36:47,629] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:36:47,644] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:36:47,646] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:36:47,647] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:36:52,825] INFO in app: OK Logging initialized.
+[2026-02-28 00:36:52,891] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:36:52,891] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:36:52,891] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:36:52,900] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:36:52,908] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:36:52,910] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:36:52,910] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:37:27,539] INFO in app: OK Logging initialized.
+[2026-02-28 00:37:27,598] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:37:27,600] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:37:27,601] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:37:27,605] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:37:27,612] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:37:27,614] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:37:27,616] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:37:47,429] INFO in app: OK Logging initialized.
+[2026-02-28 00:37:47,646] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:37:47,650] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:37:47,651] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:37:47,654] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:37:47,663] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:37:47,665] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:37:47,666] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:37:52,984] INFO in app: OK Logging initialized.
+[2026-02-28 00:37:53,055] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:37:53,058] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:37:53,059] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:37:53,061] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:37:53,066] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:37:53,067] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:37:53,068] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:38:06,489] INFO in app: OK Logging initialized.
+[2026-02-28 00:38:06,564] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:38:06,564] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:38:06,564] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:38:06,576] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:38:06,582] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:38:06,583] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:38:06,584] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:38:12,460] INFO in app: OK Logging initialized.
+[2026-02-28 00:38:12,525] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:38:12,528] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:38:12,530] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:38:12,534] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:38:12,541] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:38:12,542] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:38:12,544] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:40:45,833] INFO in app: OK Logging initialized.
+[2026-02-28 00:40:45,895] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:40:45,897] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:40:45,898] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:40:45,900] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:40:45,906] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:40:45,909] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:40:45,909] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:40:50,787] INFO in app: OK Logging initialized.
+[2026-02-28 00:40:50,850] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:40:50,854] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:40:50,855] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:40:50,858] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:40:50,864] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:40:50,866] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:40:50,867] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:41:06,018] INFO in app: OK Logging initialized.
+[2026-02-28 00:41:06,079] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:41:06,082] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:41:06,083] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:41:06,085] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:41:06,090] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:41:06,092] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:41:06,093] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:41:16,193] INFO in app: OK Logging initialized.
+[2026-02-28 00:41:16,249] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:41:16,251] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:41:16,252] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:41:16,254] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:41:16,258] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:41:16,260] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:41:16,261] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:41:27,653] INFO in app: OK Logging initialized.
+[2026-02-28 00:41:27,721] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:41:27,725] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:41:27,726] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:41:27,731] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:41:27,737] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:41:27,737] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:41:27,741] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:41:32,481] INFO in app: OK Logging initialized.
+[2026-02-28 00:41:32,548] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:41:32,551] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:41:32,552] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:41:32,556] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:41:32,561] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:41:32,562] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:41:32,563] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:41:40,776] INFO in app: OK Logging initialized.
+[2026-02-28 00:41:40,844] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:41:40,848] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:41:40,850] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:41:40,853] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:41:40,860] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:41:40,861] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:41:40,862] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:41:46,403] INFO in app: OK Logging initialized.
+[2026-02-28 00:41:46,450] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:41:46,452] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:41:46,453] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:41:46,455] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:41:46,459] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:41:46,460] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:41:46,461] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:43:51,857] INFO in app: OK Logging initialized.
+[2026-02-28 00:43:51,909] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:43:51,911] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:43:51,912] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:43:51,914] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:43:51,918] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:43:51,919] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:43:51,920] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:44:16,391] INFO in app: OK Logging initialized.
+[2026-02-28 00:44:16,443] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:44:16,443] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:44:16,443] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:44:16,443] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:44:16,457] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:44:16,459] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:44:16,460] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:44:21,987] INFO in app: OK Logging initialized.
+[2026-02-28 00:44:22,061] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:44:22,061] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:44:22,061] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:44:22,072] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:44:22,078] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:44:22,079] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:44:22,080] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:44:29,726] INFO in app: OK Logging initialized.
+[2026-02-28 00:44:29,783] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:44:29,787] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:44:29,788] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:44:29,791] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:44:29,797] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:44:29,798] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:44:29,799] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:44:34,994] INFO in app: OK Logging initialized.
+[2026-02-28 00:44:35,055] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:44:35,059] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:44:35,060] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:44:35,062] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:44:35,069] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:44:35,070] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:44:35,071] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:44:39,983] INFO in app: OK Logging initialized.
+[2026-02-28 00:44:40,049] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:44:40,053] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:44:40,054] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:44:40,057] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:44:40,065] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:44:40,067] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:44:40,068] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:44:49,429] INFO in app: OK Logging initialized.
+[2026-02-28 00:44:49,497] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:44:49,500] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:44:49,501] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:44:49,503] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:44:49,507] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:44:49,508] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:44:49,509] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-02-28 00:44:58,290] INFO in app: OK Logging initialized.
+[2026-02-28 00:44:58,372] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-02-28 00:44:58,377] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-02-28 00:44:58,378] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-02-28 00:44:58,382] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-02-28 00:44:58,391] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-02-28 00:44:58,392] INFO in app: Registered blueprint: face_bp -> /face
+[2026-02-28 00:44:58,394] INFO in app: Registered blueprint: dashboard_bp -> /dashboard

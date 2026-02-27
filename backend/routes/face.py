@@ -205,7 +205,16 @@ def liveness_frame():
                     duration_work = current_dt - open_log.check_in_time
                     if duration_work.total_seconds() < 60:
                         return jsonify({"status": "liveness_passed", "face_passed": True, "msg": "Tunggu 1 menit setelah masuk!", "final_status": "Success", "face_similarity_score": float(score)}), 200
+                    
+                    target_branch = db.query(Branch).filter_by(branch_id=open_log.checkin_branch_id).first()
+                    if target_branch and lat_attempt and lon_attempt:
+                        office_data = {"latitude": target_branch.latitude, "longitude": target_branch.longitude, "radius_meter": target_branch.radius_meter}
+                        is_in_valid_location, _ = validate_geofence(lat_attempt, lon_attempt, office_data)
+                        detected_branch_id = target_branch.branch_id
+                    else:
+                        is_in_valid_location = False # Gagal jika koordinat/cabang tidak ada
 
+                    # Lanjut ke pengecekan validasi
                     if not is_in_valid_location:
                         msg_response = "Gagal Check-Out! Lokasi di luar area kantor."
                         ok_face = False
@@ -225,7 +234,7 @@ def liveness_frame():
                         else:
                             open_log.attendance_status = 'Tepat Waktu'
                             msg_response = "Check-Out Berhasil!"
-
+                            
             # === JIKA USER KLIK TOMBOL: ABSEN MASUK ===
             elif action_type == "check_in":
                 if open_log:

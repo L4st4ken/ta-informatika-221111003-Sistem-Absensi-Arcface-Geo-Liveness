@@ -71,14 +71,34 @@ def get_summary():
     nama_cabang = "-"
     jam_kerja = "-"
     
-    sched = db.query(Schedule).filter_by(user_id=user_id, tanggal=today).first()
-    if sched:
-        br = db.query(Branch).filter_by(branch_id=sched.branch_id).first()
+    # PRIORITAS 1: Jika ada sesi yang belum check-out (Sesi Gantung/Lembur/Shift Malam)
+    if open_session:
+        br = db.query(Branch).filter_by(branch_id=open_session.checkin_branch_id).first()
         nama_cabang = br.nama_cabang if br else "Unknown"
-        jam_kerja = f"{sched.jam_mulai.strftime('%H:%M')} - {sched.jam_selesai.strftime('%H:%M')}"
-    elif user.shift:
-        jam_kerja = f"{user.shift.jam_masuk.strftime('%H:%M')} - {user.shift.jam_pulang.strftime('%H:%M')}"
-        if user.branch: nama_cabang = user.branch.nama_cabang
+        
+        #menghitung waktu tutup sesi
+        if open_session.check_in_time:
+            jam_masuk_str = open_session.check_in_time.strftime('%H:%M')
+            waktu_tutup = open_session.check_out_time.strftime('%H:%M')
+            jam_tutup_str = waktu_tutup.strftime('%H:%M')
+            
+            jam_kerja = f"{jam_masuk_str} - {waktu_tutup}"
+        else:
+            jam_kerja = "Sesi Belum Selesai"
+        
+    # PRIORITAS 2: Jika tidak ada sesi gantung, cek jadwal khusus hari ini
+    else:
+        sched = db.query(Schedule).filter_by(user_id=user_id, tanggal=today, is_active=True).first()
+        if sched:
+            br = db.query(Branch).filter_by(branch_id=sched.branch_id).first()
+            nama_cabang = br.nama_cabang if br else "Unknown"
+            jam_kerja = f"{sched.jam_mulai.strftime('%H:%M')} - {sched.jam_selesai.strftime('%H:%M')}"
+            
+        # PRIORITAS 3: Jika tidak ada jadwal khusus, pakai shift & cabang default
+        elif user.shift:
+            jam_kerja = f"{user.shift.jam_masuk.strftime('%H:%M')} - {user.shift.jam_pulang.strftime('%H:%M')}"
+            if user.branch: 
+                nama_cabang = user.branch.nama_cabang
 
     # ==========================================
     # 5. FITUR BARU: STATISTIK KEHADIRAN BULAN INI (DENGAN ALPHA CERDAS)
@@ -131,12 +151,18 @@ def get_summary():
         check_in_str = log.check_in_time.strftime("%H:%M") if log.check_in_time else "-"
         check_out_str = log.check_out_time.strftime("%H:%M") if log.check_out_time else "-"
 
+        # LOGIKA LUPA PULANG DI DASHBOARD KARYAWAN
+        log_date = log.timestamp_attempt.date()
+        status_tampil = log.attendance_status
+        if not log.check_out_time and log_date < today and log.final_status == 'Success':
+            status_tampil = "Lupa Pulang"
+
         history_data.append({
             "tanggal": log.timestamp_attempt.strftime("%Y-%m-%d"),
             "jam_masuk": check_in_str,
             "jam_pulang": check_out_str,
             "status_akhir": log.final_status,
-            "keterangan": log.keterangan if log.keterangan else (log.attendance_status or "-")
+            "keterangan": log.keterangan if log.keterangan else (status_tampil or "-")
         })
 
     return jsonify({

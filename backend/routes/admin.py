@@ -286,7 +286,7 @@ def get_attendance_reports():
     # Kelompokkan Log
     logs_dict = {}
     for log in logs:
-        log_date = (log.timestamp_attempt + timedelta(hours=7)).date()
+        log_date = log.timestamp_attempt.date()
         key = (log.user_id, log_date)
         if key not in logs_dict:
             logs_dict[key] = []
@@ -313,14 +313,21 @@ def get_attendance_reports():
                     if filter_branch and str(log.checkin_branch_id) != str(filter_branch):
                         continue
                         
-                    check_in_wib = log.check_in_time + timedelta(hours=7) if log.check_in_time else None
-                    check_out_wib = log.check_out_time + timedelta(hours=7) if log.check_out_time else None
+                    check_in_wib = log.check_in_time if log.check_in_time else None
+                    check_out_wib = log.check_out_time  if log.check_out_time else None
                     
                     durasi = "-"
                     if check_in_wib and check_out_wib:
                         delta = check_out_wib - check_in_wib
                         durasi = str(delta).split('.')[0]
                         
+                    # LOGIKA LUPA PULANG
+                    sekarang_date = (datetime.utcnow() + timedelta(hours=7)).date()
+                    status_hadir = log.attendance_status
+
+                    # Jika tidak ada jam pulang DAN hari sudah berganti (kemarin)
+                    if not log.check_out_time and current_date < sekarang_date:
+                        status_hadir = "Lupa Pulang"
                     report_data.append({
                         "tanggal": current_date.strftime("%Y-%m-%d"),
                         "nama_karyawan": user.nama_lengkap,
@@ -329,7 +336,7 @@ def get_attendance_reports():
                         "jam_masuk": check_in_wib.strftime("%H:%M") if check_in_wib else "-",
                         "jam_pulang": check_out_wib.strftime("%H:%M") if check_out_wib else "-",
                         "durasi_kerja": durasi,
-                        "status_kehadiran": log.attendance_status,
+                        "status_kehadiran": status_hadir,
                         "skor_wajah": f"{log.face_similarity_score:.2f}",
                         "status_akhir": log.final_status,
                         "sort_date": current_date # Hidden field untuk sorting
@@ -432,8 +439,14 @@ def export_attendance():
             
             if key in logs_dict:
                 log = logs_dict[key]
+                sekarang_date = (datetime.utcnow() + timedelta(hours=7)).date()
+
                 if log.final_status == 'Success':
-                    if log.attendance_status == 'Terlambat':
+                    # LOGIKA LUPA PULANG
+                    if not log.check_out_time and current_date < sekarang_date:
+                        status_teks = "Lupa Pulang"
+                        total_hadir += 1
+                    elif log.attendance_status == 'Terlambat':
                         status_teks = "Telat"
                         total_telat += 1
                         total_hadir += 1 # Telat tetap dihitung masuk kerja
