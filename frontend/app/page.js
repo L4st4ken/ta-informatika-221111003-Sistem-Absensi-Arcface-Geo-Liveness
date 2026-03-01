@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await axios.post('http://127.0.0.1:5000/auth/login', {
+      const res = await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/auth/login', {
         email,
         password,
       });

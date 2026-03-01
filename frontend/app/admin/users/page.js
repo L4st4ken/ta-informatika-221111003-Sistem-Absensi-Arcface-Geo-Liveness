@@ -33,8 +33,8 @@ export default function UserManagement() {
         return;
       }
 
-      const res = await axios.get('http://127.0.0.1:5000/admin/users', {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users', {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       setUsers(res.data);
       setLoading(false);
@@ -59,14 +59,14 @@ export default function UserManagement() {
     try {
       if (isEditMode) {
         // Edit User
-        await axios.put(`http://127.0.0.1:5000/admin/users/${formData.user_id}`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
+        await axios.put(`https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users/${formData.user_id}`, formData, {
+          headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
         alert("User berhasil diupdate!");
       } else {
         // Create User
-        await axios.post('http://127.0.0.1:5000/admin/users', formData, {
-          headers: { Authorization: `Bearer ${token}` }
+        await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users', formData, {
+          headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
         alert("User berhasil dibuat!");
       }
@@ -84,8 +84,8 @@ export default function UserManagement() {
     
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://127.0.0.1:5000/admin/users/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.delete(`https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       fetchUsers(); // Refresh tabel
     } catch (err) {

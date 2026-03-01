@@ -23,8 +23,8 @@ export default function AnomalyLogs() {
       const year = filterMonth.split('-')[0];
       const month = parseInt(filterMonth.split('-')[1], 10); // Hapus angka 0 di depan
 
-      const res = await axios.get(`http://127.0.0.1:5000/admin/anomalies?month=${month}&year=${year}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await axios.get(`https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/anomalies?month=${month}&year=${year}`, {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       
       setAnomalies(res.data);

@@ -28,12 +28,12 @@ export default function ScheduleManagement() {
       const token = localStorage.getItem('token');
       if (!token) { router.push('/'); return; }
       
-      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const config = { headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' } };
 
       const [resSched, resUsers, resBranches] = await Promise.all([
-        axios.get('http://127.0.0.1:5000/schedule/', config),
-        axios.get('http://127.0.0.1:5000/admin/users', config),
-        axios.get('http://127.0.0.1:5000/admin/branches', config)
+        axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/schedule/', config),
+        axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users', config),
+        axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/branches', config)
       ]);
 
       setSchedules(resSched.data);
@@ -55,8 +55,8 @@ export default function ScheduleManagement() {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://127.0.0.1:5000/schedule/', formData, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/schedule/', formData, {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       alert("Jadwal berhasil dibuat!");
       setShowModal(false);
@@ -71,8 +71,8 @@ export default function ScheduleManagement() {
     if(!confirm("Hapus jadwal ini?")) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://127.0.0.1:5000/schedule/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.delete(`https://nondeliberately-subordinal-maximina.ngrok-free.dev/schedule/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       initData();
     } catch (err) {

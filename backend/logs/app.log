@@ -1848,3 +1848,51 @@
 [2026-02-28 00:44:58,391] INFO in app: Registered blueprint: admin_bp -> /admin
 [2026-02-28 00:44:58,392] INFO in app: Registered blueprint: face_bp -> /face
 [2026-02-28 00:44:58,394] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-03-01 13:54:45,870] INFO in app: OK Logging initialized.
+[2026-03-01 13:54:45,990] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-03-01 13:54:45,991] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-03-01 13:54:45,991] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-03-01 13:54:45,991] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-03-01 13:54:45,991] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-03-01 13:54:45,991] INFO in app: Registered blueprint: face_bp -> /face
+[2026-03-01 13:54:45,999] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-03-01 13:54:48,744] INFO in app: OK Logging initialized.
+[2026-03-01 13:54:48,793] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-03-01 13:54:48,793] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-03-01 13:54:48,793] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-03-01 13:54:48,804] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-03-01 13:54:48,810] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-03-01 13:54:48,811] INFO in app: Registered blueprint: face_bp -> /face
+[2026-03-01 13:54:48,811] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-03-01 15:01:28,053] INFO in app: OK Logging initialized.
+[2026-03-01 15:01:28,104] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-03-01 15:01:28,104] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-03-01 15:01:28,104] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-03-01 15:01:28,104] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-03-01 15:01:28,104] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-03-01 15:01:28,104] INFO in app: Registered blueprint: face_bp -> /face
+[2026-03-01 15:01:28,104] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-03-01 15:01:30,308] INFO in app: OK Logging initialized.
+[2026-03-01 15:01:30,335] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-03-01 15:01:30,350] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-03-01 15:01:30,351] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-03-01 15:01:30,353] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-03-01 15:01:30,355] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-03-01 15:01:30,355] INFO in app: Registered blueprint: face_bp -> /face
+[2026-03-01 15:01:30,358] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-03-01 15:18:30,627] INFO in app: OK Logging initialized.
+[2026-03-01 15:18:30,680] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-03-01 15:18:30,683] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-03-01 15:18:30,684] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-03-01 15:18:30,686] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-03-01 15:18:30,691] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-03-01 15:18:30,693] INFO in app: Registered blueprint: face_bp -> /face
+[2026-03-01 15:18:30,694] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-03-01 15:18:32,924] INFO in app: OK Logging initialized.
+[2026-03-01 15:18:32,979] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-03-01 15:18:32,979] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-03-01 15:18:32,979] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-03-01 15:18:32,979] INFO in app: Registered blueprint: schedule_bp -> /schedule
+[2026-03-01 15:18:32,979] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-03-01 15:18:32,979] INFO in app: Registered blueprint: face_bp -> /face
+[2026-03-01 15:18:32,990] INFO in app: Registered blueprint: dashboard_bp -> /dashboard

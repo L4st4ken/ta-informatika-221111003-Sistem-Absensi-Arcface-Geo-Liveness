@@ -22,7 +22,7 @@ export default function LaporanPage() {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const res = await axios.get('http://127.0.0.1:5000/admin/branches', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/branches', { headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' } });
         setBranches(res.data);
       } catch (e) { console.error(e); }
     };
@@ -38,10 +38,10 @@ export default function LaporanPage() {
       const year = filterMonth.split('-')[0];
       const month = parseInt(filterMonth.split('-')[1], 10);
       
-      let url = `http://127.0.0.1:5000/admin/reports?month=${month}&year=${year}`;
+      let url = `https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/reports?month=${month}&year=${year}`;
       if (filterBranch) url += `&branch_id=${filterBranch}`;
 
-      const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(url, { headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' } });
       setReports(res.data);
     } catch (err) {
       console.error(err);
@@ -60,7 +60,7 @@ export default function LaporanPage() {
   const handleExportExcel = () => {
     const year = filterMonth.split('-')[0];
     const month = parseInt(filterMonth.split('-')[1], 10);
-    const url = `http://127.0.0.1:5000/admin/export/attendance?month=${month}&year=${year}`;
+    const url = `https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/export/attendance?month=${month}&year=${year}`;
     window.open(url, '_blank');
   };
 

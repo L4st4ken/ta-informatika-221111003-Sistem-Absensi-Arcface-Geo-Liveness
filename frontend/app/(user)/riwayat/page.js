@@ -16,8 +16,8 @@ export default function RiwayatPage() {
         const token = localStorage.getItem('token');
         if (!token) { router.push('/'); return; }
 
-        const res = await axios.get('http://127.0.0.1:5000/attendance/history', {
-          headers: { Authorization: `Bearer ${token}` }
+        const res = await axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/attendance/history', {
+          headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
         setLogs(res.data);
         setLoading(false);

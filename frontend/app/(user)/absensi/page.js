@@ -29,8 +29,8 @@ export default function AbsensiPage() {
   // 1. HELPER: Start Session
   const startSession = useCallback(async (token) => {
     try {
-      await axios.post('http://127.0.0.1:5000/face/liveness/start', {}, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/face/liveness/start', {}, {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       setLoading(false);
       setMessage("Silakan posisikan wajah di kotak...");
@@ -81,14 +81,16 @@ export default function AbsensiPage() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.post('http://127.0.0.1:5000/face/liveness/frame', {
+      const res = await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/face/liveness/frame', {
         image_base64: imageSrc,
         latitude: location.latitude,
         longitude: location.longitude,
         action_type: actionType,
         note: userNote
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}`,
+      'ngrok-skip-browser-warning': 'true'
+      }
       });
 
       const data = res.data;

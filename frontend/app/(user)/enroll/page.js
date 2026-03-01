@@ -30,10 +30,10 @@ export default function EnrollPage() {
       }
 
       // Kirim ke Backend
-      const res = await axios.post('http://127.0.0.1:5000/auth/upload-embedding', {
+      const res = await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/auth/upload-embedding', {
         image_base64: imageSrc
       }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
 
       if (res.status === 200) {

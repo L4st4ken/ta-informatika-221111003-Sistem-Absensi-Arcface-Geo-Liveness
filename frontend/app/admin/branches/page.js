@@ -26,8 +26,8 @@ export default function BranchManagement() {
       const token = localStorage.getItem('token');
       if (!token) { router.push('/'); return; }
 
-      const res = await axios.get('http://127.0.0.1:5000/admin/branches', {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/branches', {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       setBranches(res.data);
       setLoading(false);
@@ -48,13 +48,13 @@ export default function BranchManagement() {
     
     try {
       if (isEditMode) {
-        await axios.put(`http://127.0.0.1:5000/admin/branches/${formData.branch_id}`, formData, {
-          headers: { Authorization: `Bearer ${token}` }
+        await axios.put(`https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/branches/${formData.branch_id}`, formData, {
+          headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
         alert("Cabang berhasil diupdate!");
       } else {
-        await axios.post('http://127.0.0.1:5000/admin/branches', formData, {
-          headers: { Authorization: `Bearer ${token}` }
+        await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/branches', formData, {
+          headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
         alert("Cabang berhasil dibuat!");
       }
@@ -69,8 +69,8 @@ export default function BranchManagement() {
     if(!confirm("Hapus cabang ini?")) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://127.0.0.1:5000/admin/branches/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.delete(`https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/branches/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       fetchBranches();
     } catch (err) {

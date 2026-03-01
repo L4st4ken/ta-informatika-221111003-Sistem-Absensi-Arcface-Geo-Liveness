@@ -29,7 +29,7 @@ export default function RegisterPage() {
 
     try {
       // FIX 'res assigned but never used': Kita baca response dari backend
-      const res = await axios.post('http://127.0.0.1:5000/auth/register', formData);
+      const res = await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/auth/register', formData);
       
       // Gunakan pesan dari backend jika ada, atau default
       const successMessage = res.data.msg || 'Registrasi Berhasil! Silakan Login.';
