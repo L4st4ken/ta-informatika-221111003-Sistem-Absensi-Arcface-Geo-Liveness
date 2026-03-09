@@ -196,22 +196,43 @@ export default function Dashboard() {
                           <td className="p-3 font-medium text-gray-700">{log.tanggal}</td>
                           <td className="p-3 text-blue-600 font-medium">{log.jam_masuk}</td>
                           <td className="p-3 text-orange-600 font-medium">{log.jam_pulang}</td>
+                          
+                          {/* 1. PILL STATUS AKHIR */}
                           <td className="p-3">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                              log.status_akhir.includes('Success') ? 'bg-green-100 text-green-700' : 
-                              log.status_akhir.includes('GPS') ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
+                              log.jam_pulang === '-' && log.status_akhir === 'Success'
+                                ? (user.role === 'supervisor' 
+                                    ? 'bg-blue-100 text-blue-700 animate-pulse' 
+                                    : 'bg-yellow-100 text-yellow-700 animate-pulse') 
+                                : log.status_akhir === 'Success' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-red-100 text-red-700'
                             }`}>
-                              {log.status_akhir === 'Success' ? 'Hadir' : 'Gagal'}
+                              {log.jam_pulang === '-' && log.status_akhir === 'Success' 
+                                ? 'Belum Pulang' 
+                                : log.status_akhir === 'Success' 
+                                ? 'Berhasil' 
+                                : 'Gagal'}
                             </span>
                           </td>
+                          
+                          {/* 2. WARNA KETERANGAN DINAMIS */}
                           <td className="p-3">
                             <span className={`text-xs font-bold ${
-                              log.keterangan === 'Tepat Waktu' ? 'text-green-600' : 
-                              log.keterangan === 'Terlambat' ? 'text-orange-500' : 'text-gray-600'
+                              log.keterangan === 'Tepat Waktu' || log.keterangan.includes('Check-In') 
+                                ? 'text-green-600' : 
+                              log.keterangan === 'Terlambat' || log.keterangan === 'Pulang Cepat' 
+                                ? 'text-orange-500' : 
+                              log.keterangan === 'Sesi Aktif' 
+                                ? 'text-blue-600 animate-pulse' : /* Tambah efek kedip ringan untuk Sesi Aktif */
+                              log.keterangan === 'Lupa Pulang' || log.keterangan === 'Absen Tidak Lengkap' || log.status_akhir.includes('Failure') 
+                                ? 'text-red-600' : 
+                              'text-gray-600'
                             }`}>
                               {log.keterangan}
                             </span>
                           </td>
+                          
                         </tr>
                       ))
                     ) : (

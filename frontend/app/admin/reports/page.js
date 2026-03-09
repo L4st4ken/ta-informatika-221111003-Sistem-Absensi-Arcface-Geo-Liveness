@@ -57,11 +57,37 @@ export default function LaporanPage() {
   }, [filterMonth, filterBranch]);
 
   // 3. Fungsi Download Excel (Sekarang Sinkron dengan Filter Bulan)
-  const handleExportExcel = () => {
-    const year = filterMonth.split('-')[0];
-    const month = parseInt(filterMonth.split('-')[1], 10);
-    const url = `https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/export/attendance?month=${month}&year=${year}`;
-    window.open(url, '_blank');
+  // 3. Fungsi Download Excel (Aman dengan Token JWT)
+  const handleExportExcel = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const year = filterMonth.split('-')[0];
+      const month = parseInt(filterMonth.split('-')[1], 10);
+      
+      const url = `https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/export/attendance?month=${month}&year=${year}`;
+      
+      // Ambil file menggunakan Axios (WAJIB pakai responseType: 'blob')
+      const response = await axios.get(url, {
+        headers: { 
+          Authorization: `Bearer ${token}`, 
+          'ngrok-skip-browser-warning': 'true' 
+        },
+        responseType: 'blob' // PENTING: Beritahu Axios bahwa ini adalah File, bukan JSON!
+      });
+
+      // Proses mengubah Blob menjadi file yang ter-download di browser
+      const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', `Rekap_HRD_${year}_${month}.xlsx`); // Nama file saat disave
+      document.body.appendChild(link);
+      link.click(); // Klik otomatis secara gaib
+      link.remove(); // Bersihkan kembali
+      
+    } catch (err) {
+      console.error("Gagal mendownload Excel:", err);
+      alert("Gagal mengunduh file. Pastikan Anda memiliki akses Admin.");
+    }
   };
 
   // 4. Logika Pencarian (Real-time di sisi Client)
@@ -165,12 +191,18 @@ export default function LaporanPage() {
                       <td className="p-4 font-mono text-gray-600">{r.durasi_kerja}</td>
                       {/* KOLOM STATUS KEHADIRAN */}
                       <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-md text-xs font-bold ${
-                          r.status_kehadiran === 'Tepat Waktu' ? 'bg-green-100 text-green-700' : 
-                          r.status_kehadiran === 'Terlambat' ? 'bg-orange-100 text-orange-700' :
-                          r.status_kehadiran === 'Lupa Pulang' ? 'bg-yellow-100 text-yellow-800' : 
-                          r.status_kehadiran === 'Libur' ? 'bg-gray-100 text-gray-700' : 
-                          'bg-red-100 text-red-700' // Untuk Alpha atau Gagal
+                        <span className={`px-2.5 py-1 rounded-md text-xs font-bold whitespace-nowrap ${
+                          r.status_kehadiran === 'Tepat Waktu' || r.status_kehadiran?.includes('Check-In')
+                            ? 'bg-green-100 text-green-700' : 
+                          r.status_kehadiran === 'Terlambat' || r.status_kehadiran === 'Pulang Cepat' 
+                            ? 'bg-orange-100 text-orange-700' :
+                          r.status_kehadiran === 'Sesi Aktif'
+                            ? 'bg-blue-100 text-blue-700 animate-pulse' :
+                          r.status_kehadiran === 'Lupa Pulang' || r.status_kehadiran?.includes('Parsial') || r.status_kehadiran === 'Absen Tidak Lengkap'
+                            ? 'bg-yellow-100 text-yellow-800' : 
+                          r.status_kehadiran === 'Libur' 
+                            ? 'bg-gray-100 text-gray-700' : 
+                          'bg-red-100 text-red-700' // Alpha atau Gagal
                         }`}>
                           {r.status_kehadiran || 'Gagal'}
                         </span>

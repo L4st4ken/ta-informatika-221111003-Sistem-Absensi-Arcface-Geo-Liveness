@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, current_app, send_file
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, extract
 from database.connection import get_db
-from models.models import User, Branch, AttendanceLog, Shift
+from models.models import Schedule, User, Branch, AttendanceLog, Shift
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from werkzeug.security import generate_password_hash
 from functools import wraps
@@ -370,14 +370,11 @@ def get_attendance_reports():
     return jsonify(report_data), 200
 
 # ==========================================
-# --- FITUR BARU: EXPORT EXCEL UNTUK HRD ---
-# ==========================================
-# ==========================================
 # --- FITUR EXPORT EXCEL (FORMAT MATRIKS BULANAN) ---
 # ==========================================
 @admin_bp.route('/export/attendance', methods=['GET'])
-# @jwt_required()
-# @admin_required
+@jwt_required()
+@admin_required
 def export_attendance():
     """
     Endpoint untuk mendownload Laporan Absensi format Matriks (Pivot).
@@ -403,19 +400,27 @@ def export_attendance():
         extract('year', AttendanceLog.timestamp_attempt) == tahun_target
     ).all()
 
+    schedules = db.query(Schedule).filter(
+        extract('month', Schedule.tanggal) == bulan_target,
+        extract('year', Schedule.tanggal) == tahun_target,
+        Schedule.is_active == True
+    ).all()
+
     # 4. Petakan Log ke dalam Dictionary: {(user_id, tanggal): log}
+    sched_dict = {}
+    for s in schedules:
+        k = (s.user_id, s.tanggal.day)
+        sched_dict[k] = sched_dict.get(k, 0) + 1
+
+    # Petakan Log Selesai (Check-in & Out) untuk hitung Realisasi
     logs_dict = {}
     for log in logs:
         log_date = (log.timestamp_attempt + timedelta(hours=7)).date()
         key = (log.user_id, log_date.day)
-        
-        # Jika karyawan absen berkali-kali di hari yang sama, prioritaskan yang Success
-        if key not in logs_dict or log.final_status == 'Success':
-            logs_dict[key] = log
+        if key not in logs_dict: logs_dict[key] = []
+        if log.final_status == 'Success': logs_dict[key].append(log)
 
-    # 5. Bangun Matriks Data
     data_excel = []
-    
     for user in all_users:
         row_data = {
             "Nama Karyawan": user.nama_lengkap,
@@ -423,57 +428,75 @@ def export_attendance():
             "Cabang Utama": user.branch.nama_cabang if user.branch else "-"
         }
         
-        # Siapkan Counter Rekapitulasi
-        total_hadir = 0
-        total_telat = 0
-        total_alpha = 0
-        total_gagal = 0
+        total_hadir = 0; total_telat = 0; total_alpha = 0; total_gagal = 0; total_parsial = 0
         
-        # Loop dari tanggal 1 sampai akhir bulan
         for day in range(1, num_days + 1):
             current_date = date(tahun_target, bulan_target, day)
-            is_weekend = current_date.weekday() >= 5 # 5=Sabtu, 6=Minggu
-            
+            is_weekend = current_date.weekday() >= 5
             key = (user.user_id, day)
             status_teks = ""
             
-            if key in logs_dict:
-                log = logs_dict[key]
-                sekarang_date = (datetime.utcnow() + timedelta(hours=7)).date()
+            # Tentukan Target Hari Ini (Dari Jadwal atau Default 1)
+            target_hari_ini = sched_dict.get(key, 1)
 
-                if log.final_status == 'Success':
-                    # LOGIKA LUPA PULANG
-                    if not log.check_out_time and current_date < sekarang_date:
-                        status_teks = "Lupa Pulang"
-                        total_hadir += 1
-                    elif log.attendance_status == 'Terlambat':
-                        status_teks = "Telat"
-                        total_telat += 1
-                        total_hadir += 1 # Telat tetap dihitung masuk kerja
-                    else:
-                        status_teks = "Hadir"
-                        total_hadir += 1
+            if key in logs_dict and len(logs_dict[key]) > 0:
+                list_logs = logs_dict[key]
+                # Hitung berapa absen yang sukses sampai pulang
+                realisasi = sum(1 for l in list_logs if l.check_out_time)
+                
+                # 1. PISAHKAN LOGIKA SESI GANTUNG
+                sesi_gantung = [l for l in list_logs if not l.check_out_time]
+                is_lupa_pulang_permanen = False
+                is_sesi_aktif = False
+                
+                if sesi_gantung:
+                    for gantung in sesi_gantung:
+                        # Gunakan aturan 18 Jam untuk HRD juga!
+                        durasi = (sekarang - gantung.check_in_time).total_seconds()
+                        if durasi > (18 * 3600):
+                            is_lupa_pulang_permanen = True
+                        else:
+                            is_sesi_aktif = True # Berarti dia sedang Shift Malam / Lintas Hari
+                
+                ada_telat = any(l.attendance_status == 'Terlambat' for l in list_logs)
+
+                # 2. EKSEKUSI STATUS EXCEL DENGAN PRIORITAS YANG BENAR
+                if is_sesi_aktif:
+                    # Karyawan masih punya waktu untuk check-out, jangan divonis dulu!
+                    status_teks = "Sesi Aktif" 
+                    total_hadir += 1
+                elif is_lupa_pulang_permanen:
+                    # Sudah lewat 18 Jam, resmi divonis Lupa Pulang
+                    status_teks = "Lupa Pulang"
+                    total_hadir += 1
+                elif current_date < sekarang.date() and realisasi < target_hari_ini:
+                    # Sudah beda hari, tidak ada sesi aktif, dan realisasi kurang dari target!
+                    status_teks = "Parsial"
+                    total_parsial += 1
+                    total_hadir += 1 
+                elif ada_telat:
+                    status_teks = "Telat"
+                    total_telat += 1
+                    total_hadir += 1
                 else:
-                    status_teks = "Gagal"
-                    total_gagal += 1
+                    status_teks = "Hadir"
+                    total_hadir += 1
             else:
-                # Jika tidak ada log absensi
+                # Tidak ada log sukses sama sekali
                 if current_date > sekarang.date():
-                    status_teks = "-" # Hari belum terjadi (masa depan)
+                    status_teks = "-" 
                 elif is_weekend:
                     status_teks = "Libur"
                 else:
                     status_teks = "Alpha"
                     total_alpha += 1
                     
-            # Masukkan status ke kolom tanggal (Tgl 1, Tgl 2, dst)
             row_data[f"Tgl {day}"] = status_teks
             
-        # Tambahkan Kolom Summary di Ujung Kanan
         row_data["Total Hadir"] = total_hadir
+        row_data["Absen Parsial"] = total_parsial # Tambahan Kolom HRD!
         row_data["Total Telat"] = total_telat
         row_data["Total Alpha"] = total_alpha
-        row_data["Total Gagal"] = total_gagal
         
         data_excel.append(row_data)
 

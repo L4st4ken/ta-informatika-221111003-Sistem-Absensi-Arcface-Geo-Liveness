@@ -5,7 +5,6 @@ from models.models import User, AttendanceLog, FaceEmbedding, Schedule, Branch, 
 from sqlalchemy import func, desc, extract
 from datetime import datetime, timedelta, date
 
-
 dashboard_bp = Blueprint('dashboard_bp', __name__, url_prefix='/dashboard')
 
 def get_wib_today():
@@ -34,6 +33,25 @@ def get_summary():
         AttendanceLog.final_status == 'Success',
         AttendanceLog.check_out_time == None
     ).order_by(desc(AttendanceLog.timestamp_attempt)).first()
+    if open_session:
+        current_time_wib = datetime.utcnow() + timedelta(hours=7)
+        # Hitung selisih waktu dari check-in sampai sekarang
+        durasi_gantung = (current_time_wib - open_session.check_in_time).total_seconds()
+        
+        # Jika sudah lewat 18 jam, anggap sesi ini HANGUS / EXPIRED
+        if durasi_gantung > (18 * 3600):
+            open_session.check_out_time = open_session.check_in_time 
+            open_session.attendance_status = 'Lupa Pulang'
+            open_session.keterangan = 'Ditutup otomatis oleh sistem (>18 Jam)'
+            
+            try:
+                db.commit() # Simpan perubahan ke database permanen
+            except Exception as e:
+                db.rollback()
+                print(f"Error auto-close session: {e}")
+            
+            # 2. Kosongkan sesi di memori agar Dashboard mereset tombol menjadi "Absen Masuk"
+            open_session = None
 
     # B. Hitung berapa kali user SUDAH SELESAI (Masuk & Pulang) hari ini
     completed_sessions_count = db.query(AttendanceLog).filter(
@@ -67,38 +85,51 @@ def get_summary():
         # Sesi selesai < Target sesi (Misal target 2 cabang, baru selesai 1) -> Boleh Masuk Lagi
         action_status = 'check_in'
 
-    # 4. Ambil Nama Cabang & Jam Kerja
+    # 4. Ambil Nama Cabang & Jam Kerja (TARGET SHIFT / SCHEDULE)
     nama_cabang = "-"
     jam_kerja = "-"
+    current_time_obj = (datetime.utcnow() + timedelta(hours=7)).time()
     
-    # PRIORITAS 1: Jika ada sesi yang belum check-out (Sesi Gantung/Lembur/Shift Malam)
-    if open_session:
-        br = db.query(Branch).filter_by(branch_id=open_session.checkin_branch_id).first()
+    # LANGKAH 1: Tentukan Target Jam Kerja (Jadwal vs Shift)
+    todays_schedules = db.query(Schedule).filter_by(user_id=user_id, tanggal=today, is_active=True).all()
+    if todays_schedules:
+        todays_schedules = sorted(todays_schedules, key=lambda x: x.jam_mulai)
+        sched_target = todays_schedules[0]
+        for sched in todays_schedules:
+            # Teks di dashboard akan BERUBAH 1 jam sebelum jadwal berikutnya dimulai
+            waktu_buka = (datetime.combine(today, sched.jam_mulai) - timedelta(hours=1)).time()
+            
+            if current_time_obj >= waktu_buka:
+                # Jika jam sekarang sudah melewati jam buka jadwal ini, timpa targetnya!
+                sched_target = sched
+        br = db.query(Branch).filter_by(branch_id=sched_target.branch_id).first()
         nama_cabang = br.nama_cabang if br else "Unknown"
+        jam_kerja = f"{sched_target.jam_mulai.strftime('%H:%M')} - {sched_target.jam_selesai.strftime('%H:%M')}"
         
-        #menghitung waktu tutup sesi
-        if open_session.check_in_time:
-            jam_masuk_str = open_session.check_in_time.strftime('%H:%M')
-            waktu_tutup = open_session.check_out_time.strftime('%H:%M')
-            jam_tutup_str = waktu_tutup.strftime('%H:%M')
-            
-            jam_kerja = f"{jam_masuk_str} - {waktu_tutup}"
-        else:
-            jam_kerja = "Sesi Belum Selesai"
+    elif user.shift:
+        # Jika tidak ada jadwal, gunakan Shift normal
+        jam_kerja = f"{user.shift.jam_masuk.strftime('%H:%M')} - {user.shift.jam_pulang.strftime('%H:%M')}"
+        if user.branch: 
+            nama_cabang = user.branch.nama_cabang
+
+    # LANGKAH 2: Update Nama Cabang HANYA jika sedang ada sesi berjalan (Tanpa merusak Jam Kerja)
+    if open_session:
+        br_actual = db.query(Branch).filter_by(branch_id=open_session.checkin_branch_id).first()
+        if br_actual:
+            nama_cabang = br_actual.nama_cabang
         
-    # PRIORITAS 2: Jika tidak ada sesi gantung, cek jadwal khusus hari ini
-    else:
-        sched = db.query(Schedule).filter_by(user_id=user_id, tanggal=today, is_active=True).first()
-        if sched:
-            br = db.query(Branch).filter_by(branch_id=sched.branch_id).first()
-            nama_cabang = br.nama_cabang if br else "Unknown"
-            jam_kerja = f"{sched.jam_mulai.strftime('%H:%M')} - {sched.jam_selesai.strftime('%H:%M')}"
-            
-        # PRIORITAS 3: Jika tidak ada jadwal khusus, pakai shift & cabang default
+        matched_sched = db.query(Schedule).filter_by(
+            user_id=user_id, 
+            tanggal=today, 
+            branch_id=open_session.checkin_branch_id,
+            is_active=True
+        ).first()
+
+        if matched_sched:
+            jam_kerja = f"{matched_sched.jam_mulai.strftime('%H:%M')} - {matched_sched.jam_selesai.strftime('%H:%M')}"
         elif user.shift:
+            # Fallback jika ternyata dia pakai shift reguler, bukan jadwal
             jam_kerja = f"{user.shift.jam_masuk.strftime('%H:%M')} - {user.shift.jam_pulang.strftime('%H:%M')}"
-            if user.branch: 
-                nama_cabang = user.branch.nama_cabang
 
     # ==========================================
     # 5. FITUR BARU: STATISTIK KEHADIRAN BULAN INI (DENGAN ALPHA CERDAS)
@@ -154,15 +185,42 @@ def get_summary():
         # LOGIKA LUPA PULANG DI DASHBOARD KARYAWAN
         log_date = log.timestamp_attempt.date()
         status_tampil = log.attendance_status
-        if not log.check_out_time and log_date < today and log.final_status == 'Success':
-            status_tampil = "Lupa Pulang"
+        current_time_wib = datetime.utcnow() + timedelta(hours=7)
+        if log.final_status == 'Success':
+            # SKENARIO 1: SESI MASIH TERBUKA (Belum Checkout)
+            if not log.check_out_time:
+                # Gunakan aturan 18 Jam
+                durasi_gantung = (current_time_wib - log.check_in_time).total_seconds()
+                if durasi_gantung > (18 * 3600):
+                    status_tampil = "Lupa Pulang"
+                else:
+                    status_tampil = "Sesi Aktif" # Teks dinamis agar user tahu sesi masih berjalan
+            
+            # SKENARIO 2: SUDAH CHECKOUT & HARI SUDAH BERGANTI (Evaluasi Absen Tidak Lengkap)
+            elif log_date < today:
+                # Cek apakah target jadwal hari itu terpenuhi
+                target_jadwal = db.query(Schedule).filter_by(
+                    user_id=user_id, tanggal=log_date, is_active=True
+                ).count()
+                target_jadwal = target_jadwal if target_jadwal > 0 else 1 # Default 1 jika pakai shift biasa
+                
+                selesai_count = db.query(AttendanceLog).filter(
+                    AttendanceLog.user_id == user_id,
+                    func.date(AttendanceLog.timestamp_attempt) == log_date,
+                    AttendanceLog.final_status == 'Success',
+                    AttendanceLog.check_out_time != None
+                ).count()
+                
+                # JIKA REALISASI < TARGET -> ABSEN TIDAK LENGKAP
+                if selesai_count < target_jadwal:
+                    status_tampil = "Absen Tidak Lengkap"
 
         history_data.append({
             "tanggal": log.timestamp_attempt.strftime("%Y-%m-%d"),
             "jam_masuk": check_in_str,
             "jam_pulang": check_out_str,
             "status_akhir": log.final_status,
-            "keterangan": log.keterangan if log.keterangan else (status_tampil or "-")
+            "keterangan": status_tampil if status_tampil else log.keterangan
         })
 
     return jsonify({

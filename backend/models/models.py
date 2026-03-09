@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Text, Date, Time, DateTime, Boolean, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Float, Text, Date, Time, DateTime, Boolean, ForeignKey, Enum, Numeric
 from sqlalchemy.orm import relationship
 from database.connection import Base
 from datetime import datetime
@@ -27,8 +27,8 @@ class Branch(Base):
 
     branch_id = Column(Integer, primary_key=True, autoincrement=True)
     nama_cabang = Column(String(100), nullable=False)
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
+    latitude = Column(Numeric(11, 6), nullable=True)
+    longitude = Column(Numeric(11, 6), nullable=True)
     radius_meter = Column(Integer, default=50)
 
     # Relationships
@@ -124,8 +124,8 @@ class AttendanceLog(Base):
 
     # Data Teknis (Snapshot saat Check-In)
     timestamp_attempt = Column(DateTime, default=datetime.utcnow)
-    latitude_attempt = Column(Float, nullable=True)
-    longitude_attempt = Column(Float, nullable=True)
+    latitude_attempt = Column(Numeric(11, 6), nullable=True)
+    longitude_attempt = Column(Numeric(11, 6), nullable=True)
     is_inside_geofence = Column(Boolean, default=False)
     is_liveness_passed = Column(Boolean, default=False)
     face_similarity_score = Column(Float, default=0.0)

@@ -7,6 +7,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token, jwt_re
 from models.models import User, FaceEmbedding, Shift 
 from database.connection import get_db
 from services.face_service import face_service
+from services.face_detector import FaceDetector
 from utils.validation import decode_image
 from utils.token_store import store_refresh_token, revoke_refresh_token, is_refresh_token_active
 from datetime import timedelta
@@ -14,6 +15,54 @@ from config import Config
 import json
 
 auth_bp = Blueprint("auth_bp", __name__, url_prefix="/auth")
+detector = FaceDetector(model_dir="models", model_name="det_500m.onnx")
+
+
+def check_face_alignment(face_box, img_w, img_h):
+    fx1, fy1, fx2, fy2 = face_box
+    
+    # 1. Deteksi Orientasi Kamera (Responsive Logic)
+    is_portrait = img_h > img_w
+    
+    # Rasio ideal wajah manusia adalah sekitar 1 : 1.3 (Lebar : Tinggi)
+    if is_portrait:
+        # Jika di HP (Portrait): Jadikan LEBAR layar sebagai patokan
+        box_w = int(img_w * 0.65)   # Kotak mengambil 65% dari lebar HP
+        box_h = int(box_w * 1.3)    # Tingginya mengikuti rasio 1.3 dari lebar
+    else:
+        # Jika di Laptop (Landscape): Jadikan TINGGI layar sebagai patokan
+        box_h = int(img_h * 0.65)   # Kotak mengambil 65% dari tinggi Laptop
+        box_w = int(box_h / 1.3)    # Lebarnya mengikuti rasio pembagian 1.3
+
+    # 2. Hitung Koordinat Kotak agar Pas di Tengah Layar
+    gx1 = (img_w - box_w) // 2
+    gy1 = (img_h - box_h) // 2
+    gx2 = gx1 + box_w
+    gy2 = gy1 + box_h
+    guide_box = [gx1, gy1, gx2, gy2]
+
+    # 3. Hitung Titik Tengah Wajah vs Titik Tengah Kotak
+    fcx = (fx1 + fx2) // 2
+    fcy = (fy1 + fy2) // 2
+    gcx = (gx1 + gx2) // 2
+    gcy = (gy1 + gy2) // 2
+    
+    diff_x = abs(fcx - gcx)
+    diff_y = abs(fcy - gcy)
+    
+    # Toleransi melenceng (15% dari ukuran layar)
+    limit_x = img_w * 0.15 
+    limit_y = img_h * 0.15
+
+    if diff_x > limit_x or diff_y > limit_y:
+        return False, "Paskan Wajah di Tengah Kotak!", guide_box
+
+    # 4. Validasi Jarak (Zoom)
+    face_h = fy2 - fy1
+    if face_h < box_h * 0.45: # Toleransi jarak agar di HP tidak perlu terlalu nempel
+        return False, "Maju Dikit (Wajah Terlalu Jauh)", guide_box
+        
+    return True, "OK", guide_box
 
 # -----------------------
 # Register User (UPDATED)
@@ -134,7 +183,30 @@ def upload_embedding():
     if img is None:
         return jsonify({"error": "Invalid image"}), 400
 
-    embedding = face_service.get_embedding(img)
+    # ==========================================
+    # LOGIKA BARU: DETEKSI DAN CROP WAJAH DULU!
+    # ==========================================
+    boxes = detector.detect_faces(img)
+    if not boxes:
+        return jsonify({"error": "Wajah tidak terdeteksi di kamera!"}), 400
+
+    box = detector.pick_largest(boxes)
+    
+    # --- TAMBAHAN: VALIDASI KOTAK KUNING ---
+    h, w, _ = img.shape
+    is_aligned, align_msg, _ = check_face_alignment(box, w, h)
+    
+    if not is_aligned:
+        return jsonify({"error": align_msg}), 400 # Tolak jika wajah melenceng/terlalu jauh
+    # ---------------------------------------
+
+    # Jika wajah sudah pas di tengah, baru di-crop
+    crop_img = detector.crop_face(img, box, margin=0.25)
+
+    # Ekstrak embedding dari wajah yang SUDAH DICROP
+    embedding = face_service.get_embedding(crop_img)
+    # ==========================================
+
     if embedding is None:
         return jsonify({"error": "Failed to extract face embedding"}), 500
 

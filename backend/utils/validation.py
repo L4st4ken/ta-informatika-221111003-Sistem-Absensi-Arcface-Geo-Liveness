@@ -39,6 +39,9 @@ def calculate_face_similarity(embedding1, embedding2, threshold=0.45):
 def haversine_distance(lat1, lon1, lat2, lon2):
     """Menghitung jarak (meter) antara 2 koordinat"""
     R = 6371000  # Radius bumi dalam meter
+    lat1, lon1 = float(lat1), float(lon1)
+    lat2, lon2 = float(lat2), float(lon2)
+
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
     delta_phi = math.radians(lat2 - lat1)

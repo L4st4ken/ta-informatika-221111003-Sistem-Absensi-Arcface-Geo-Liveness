@@ -27,14 +27,28 @@ def get_wib_time():
 
 def check_face_alignment(face_box, img_w, img_h):
     fx1, fy1, fx2, fy2 = face_box
-    box_w = int(img_w * 0.45) 
-    box_h = int(img_h * 0.55)
+    
+    # 1. Deteksi Orientasi Kamera (Responsive Logic)
+    is_portrait = img_h > img_w
+    
+    # Rasio ideal wajah manusia adalah sekitar 1 : 1.3 (Lebar : Tinggi)
+    if is_portrait:
+        # Jika di HP (Portrait): Jadikan LEBAR layar sebagai patokan
+        box_w = int(img_w * 0.65)   # Kotak mengambil 65% dari lebar HP
+        box_h = int(box_w * 1.3)    # Tingginya mengikuti rasio 1.3 dari lebar
+    else:
+        # Jika di Laptop (Landscape): Jadikan TINGGI layar sebagai patokan
+        box_h = int(img_h * 0.65)   # Kotak mengambil 65% dari tinggi Laptop
+        box_w = int(box_h / 1.3)    # Lebarnya mengikuti rasio pembagian 1.3
+
+    # 2. Hitung Koordinat Kotak agar Pas di Tengah Layar
     gx1 = (img_w - box_w) // 2
     gy1 = (img_h - box_h) // 2
     gx2 = gx1 + box_w
     gy2 = gy1 + box_h
     guide_box = [gx1, gy1, gx2, gy2]
 
+    # 3. Hitung Titik Tengah Wajah vs Titik Tengah Kotak
     fcx = (fx1 + fx2) // 2
     fcy = (fy1 + fy2) // 2
     gcx = (gx1 + gx2) // 2
@@ -42,14 +56,17 @@ def check_face_alignment(face_box, img_w, img_h):
     
     diff_x = abs(fcx - gcx)
     diff_y = abs(fcy - gcy)
+    
+    # Toleransi melenceng (15% dari ukuran layar)
     limit_x = img_w * 0.15 
     limit_y = img_h * 0.15
 
     if diff_x > limit_x or diff_y > limit_y:
         return False, "Paskan Wajah di Tengah Kotak!", guide_box
 
+    # 4. Validasi Jarak (Zoom)
     face_h = fy2 - fy1
-    if face_h < box_h * 0.4:
+    if face_h < box_h * 0.45: # Toleransi jarak agar di HP tidak perlu terlalu nempel
         return False, "Maju Dikit (Wajah Terlalu Jauh)", guide_box
         
     return True, "OK", guide_box
@@ -139,7 +156,7 @@ def liveness_frame():
         current_time_obj = current_dt.time()
         today = current_dt.date()
 
-        # ANTI SPAM
+        # 1. ANTI SPAM
         recent_log = db.query(AttendanceLog).filter(
             AttendanceLog.user_id == user_id,
             AttendanceLog.timestamp_attempt >= (current_dt - timedelta(seconds=10))
@@ -152,38 +169,9 @@ def liveness_frame():
                 "final_status": recent_log.final_status
             }), 200
 
-        # AMBIL JADWAL
-        assigned_branches = []
-        jam_masuk_target = time(8, 0)
-        jam_pulang_target = time(16, 0)
-        
-        todays_schedules = db.query(Schedule).filter_by(user_id=user_id, tanggal=today, is_active=True).all()
-        if todays_schedules:
-            assigned_branches = [s.branch_id for s in todays_schedules]
-            start_times = [s.jam_mulai for s in todays_schedules]
-            end_times = [s.jam_selesai for s in todays_schedules]
-            if start_times: jam_masuk_target = min(start_times)
-            if end_times: jam_pulang_target = max(end_times)
-        elif user.shift:
-            jam_masuk_target = user.shift.jam_masuk
-            jam_pulang_target = user.shift.jam_pulang
-            if user.branch_id: assigned_branches = [user.branch_id]
-        
-        # CEK LOKASI
-        detected_branch_id = None
-        is_in_valid_location = False
-
-        if lat_attempt and lon_attempt and assigned_branches:
-            valid_branches_db = db.query(Branch).filter(Branch.branch_id.in_(assigned_branches)).all()
-            for br in valid_branches_db:
-                office_data = {"latitude": br.latitude, "longitude": br.longitude, "radius_meter": br.radius_meter}
-                inside, dist = validate_geofence(lat_attempt, lon_attempt, office_data)
-                if inside:
-                    is_in_valid_location = True
-                    detected_branch_id = br.branch_id
-                    break 
-
-        # CARI LOG YANG MASIH GANTUNG (Belum Pulang)
+        # =========================================================
+        # 2. CARI LOG GANTUNG & TERAPKAN ATURAN 18 JAM (PINDAH KE ATAS)
+        # =========================================================
         open_log = db.query(AttendanceLog).filter(
             AttendanceLog.user_id == user_id,
             AttendanceLog.check_out_time == None,
@@ -193,8 +181,79 @@ def liveness_frame():
         if open_log:
             duration = current_dt - open_log.check_in_time
             if duration.total_seconds() > (18 * 3600):
-                open_log = None 
+                open_log.attendance_status = 'Lupa Pulang'
+                open_log.keterangan = 'Ditutup Otomatis (Melewati 18 Jam)'
+                db.commit()
+                open_log = None # Reset agar dianggap tidak punya sesi aktif
 
+        # =========================================================
+        # 3. TENTUKAN JADWAL TARGET BERDASARKAN INTENT (MASUK/PULANG)
+        # =========================================================
+        assigned_branches = []
+        jam_masuk_target = None  
+        jam_pulang_target = None 
+        
+        # --- JALUR KHUSUS CHECK-OUT ---
+        if action_type == "check_out" and open_log:
+            assigned_branches = [open_log.checkin_branch_id] # Kunci lokasi ke tempat dia masuk
+            
+            # Cari jam pulangnya untuk nentuin status (Pulang Cepat / Tepat Waktu)
+            sched = db.query(Schedule).filter_by(
+                user_id=user_id, tanggal=today, branch_id=open_log.checkin_branch_id, is_active=True
+            ).first()
+            if sched:
+                jam_pulang_target = sched.jam_selesai
+            elif user.shift:
+                jam_pulang_target = user.shift.jam_pulang
+
+        # --- JALUR KETAT CHECK-IN ---
+        else:
+            todays_schedules = db.query(Schedule).filter_by(user_id=user_id, tanggal=today, is_active=True).all()
+            if todays_schedules:
+                active_schedule_found = False
+                for sched in todays_schedules:
+                    # Buka absen 1 jam sebelum jam_mulai
+                    waktu_buka = (datetime.combine(today, sched.jam_mulai) - timedelta(hours=1)).time()
+                    waktu_tutup = sched.jam_selesai
+                    
+                    if waktu_buka <= current_time_obj <= waktu_tutup:
+                        assigned_branches = [sched.branch_id]
+                        jam_masuk_target = sched.jam_mulai       
+                        jam_pulang_target = sched.jam_selesai   
+                        active_schedule_found = True
+                        break 
+                
+                if not active_schedule_found:
+                    return jsonify({
+                        "status": "position_error", 
+                        "msg": "Ditolak! Belum ada jadwal yang aktif untuk jam ini.",
+                        "final_status": "Failure"
+                    }), 200
+                    
+            elif user.shift:
+                jam_masuk_target = user.shift.jam_masuk
+                jam_pulang_target = user.shift.jam_pulang
+                if user.branch_id: assigned_branches = [user.branch_id]
+
+        # =========================================================
+        # 4. CEK LOKASI GEOFENCE
+        # =========================================================
+        detected_branch_id = None
+        is_in_valid_location = False
+
+        if lat_attempt and lon_attempt and assigned_branches:
+            valid_branches_db = db.query(Branch).filter(Branch.branch_id.in_(assigned_branches)).all()
+            for br in valid_branches_db:
+                office_data = {"latitude": float(br.latitude), "longitude": float(br.longitude), "radius_meter": br.radius_meter}
+                inside, dist = validate_geofence(float(lat_attempt), float(lon_attempt), office_data)
+                if inside:
+                    is_in_valid_location = True
+                    detected_branch_id = br.branch_id
+                    break 
+
+        # =========================================================
+        # 5. EKSEKUSI PENYIMPANAN KE DATABASE
+        # =========================================================
         try:
             # === JIKA USER KLIK TOMBOL: ABSEN PULANG ===
             if action_type == "check_out":
@@ -206,26 +265,15 @@ def liveness_frame():
                     if duration_work.total_seconds() < 60:
                         return jsonify({"status": "liveness_passed", "face_passed": True, "msg": "Tunggu 1 menit setelah masuk!", "final_status": "Success", "face_similarity_score": float(score)}), 200
                     
-                    target_branch = db.query(Branch).filter_by(branch_id=open_log.checkin_branch_id).first()
-                    if target_branch and lat_attempt and lon_attempt:
-                        office_data = {"latitude": target_branch.latitude, "longitude": target_branch.longitude, "radius_meter": target_branch.radius_meter}
-                        is_in_valid_location, _ = validate_geofence(lat_attempt, lon_attempt, office_data)
-                        detected_branch_id = target_branch.branch_id
-                    else:
-                        is_in_valid_location = False # Gagal jika koordinat/cabang tidak ada
-
-                    # Lanjut ke pengecekan validasi
                     if not is_in_valid_location:
                         msg_response = "Gagal Check-Out! Lokasi di luar area kantor."
                         ok_face = False
                     else:
-                        is_early = current_time_obj < jam_pulang_target 
+                        is_early = current_time_obj < jam_pulang_target if jam_pulang_target else False
                         
                         open_log.check_out_time = current_dt
                         open_log.checkout_branch_id = detected_branch_id
                         open_log.face_similarity_score = float(score)
-                        
-                        # SIMPAN ALASAN DARI FRONTEND
                         open_log.keterangan = alasan_note if alasan_note else "-"
 
                         if is_early:
@@ -241,18 +289,15 @@ def liveness_frame():
                     ok_face = False
                     msg_response = "Ditolak! Anda belum Check-Out dari sesi sebelumnya."
                 else:
-                    # 1. Tentukan Jadwal Target
                     target_dt = datetime.combine(today, jam_masuk_target)
                     
-                    # 2. Tentukan Jendela Waktu (Attendance Window) berdasarkan Role
                     if user.role == 'karyawan':
-                        batas_buka = target_dt - timedelta(minutes=60) # Buka 1 jam sebelum
-                        batas_tutup = target_dt + timedelta(hours=2)   # Tutup 2 jam setelah
-                    else: # Supervisor
-                        batas_buka = target_dt - timedelta(hours=2)    # Buka 2 jam sebelum
-                        batas_tutup = datetime.combine(today, jam_pulang_target) # Bebas selama jam kerja
+                        batas_buka = target_dt - timedelta(minutes=60) 
+                        batas_tutup = target_dt + timedelta(hours=2)   
+                    else: 
+                        batas_buka = target_dt - timedelta(hours=2)    
+                        batas_tutup = datetime.combine(today, jam_pulang_target) if jam_pulang_target else target_dt + timedelta(hours=8)
 
-                    # 3. Validasi Jendela Waktu
                     alasan_gagal = ""
                     if current_dt < batas_buka:
                         ok_face = False
@@ -263,7 +308,6 @@ def liveness_frame():
                         msg_response = f"Ditolak! Batas absen masuk habis ({batas_tutup.strftime('%H:%M')})."
                         alasan_gagal = "Terlambat Parah (Melewati Jendela Waktu)"
                     else:
-                        # 4. Validasi Lokasi (Jika Waktu Sudah Benar)
                         if not is_in_valid_location:
                             ok_face = False
                             target_branch = db.query(Branch).filter(Branch.branch_id.in_(assigned_branches)).first()
@@ -271,10 +315,14 @@ def liveness_frame():
                             msg_response = f"Ditolak! Lokasi salah. Target: {target_name}"
                             alasan_gagal = "Gagal Lokasi"
                         else:
-                            # 5. SEMUA VALID -> PROSES ABSEN SUKSES
+                            # PROSES ABSEN MASUK SUKSES
                             status_hadir = "Tepat Waktu"
+                            teks_keterangan = "Check-In Tepat Waktu"
                             limit_dt = target_dt + timedelta(minutes=15)
-                            if current_dt > limit_dt: status_hadir = "Terlambat"
+
+                            if current_dt > limit_dt:
+                                status_hadir = "Terlambat"
+                                teks_keterangan = "Terlambat (Lebih dari 15 Menit)"
 
                             new_log = AttendanceLog(
                                 user_id=user_id, checkin_branch_id=detected_branch_id,
@@ -282,29 +330,28 @@ def liveness_frame():
                                 latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
                                 is_inside_geofence=True, is_liveness_passed=True, 
                                 face_similarity_score=float(score), final_status='Success',
-                                keterangan="Check-In Normal"
+                                keterangan=teks_keterangan
                             )
                             db.add(new_log)
                             msg_response = f"Check-In Berhasil ({status_hadir})"
 
-                    # 6. CATAT AUDIT TRAIL JIKA GAGAL (Karena Waktu atau Lokasi)
+                    # CATAT AUDIT TRAIL JIKA GAGAL
                     if not ok_face and alasan_gagal:
                         new_log = AttendanceLog(
                             user_id=user_id, 
                             checkin_branch_id=assigned_branches[0] if assigned_branches else 1,
-                            check_in_time=current_dt, # Tetap catat jam dia mencoba absen
+                            check_in_time=current_dt, 
                             timestamp_attempt=current_dt, 
                             latitude_attempt=lat_attempt, longitude_attempt=lon_attempt,
                             is_inside_geofence=is_in_valid_location, 
                             is_liveness_passed=True, 
                             face_similarity_score=float(score), 
                             final_status='Failure_Schedule',
-                            keterangan=alasan_gagal # Catat alasan spesifiknya
+                            keterangan=alasan_gagal
                         )
                         db.add(new_log)
 
-            if ok_face or "Ditolak" in msg_response:
-                db.commit()
+            db.commit()
 
         except Exception as e:
             db.rollback()

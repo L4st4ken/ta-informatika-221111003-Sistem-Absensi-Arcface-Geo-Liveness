@@ -62,7 +62,7 @@ export default function EnrollPage() {
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Registrasi Wajah</h1>
             <p className="text-gray-500 text-sm">
-              Pastikan wajah terlihat jelas, pencahayaan cukup, dan tidak memakai masker.
+              Pastikan wajah berada di dalam kotak, pencahayaan cukup, dan tidak memakai masker.
             </p>
           </div>
         )}
@@ -75,14 +75,34 @@ export default function EnrollPage() {
             <p className="text-gray-500">Mengarahkan kembali ke Dashboard...</p>
           </div>
         ) : (
-          <div className="relative rounded-xl overflow-hidden bg-black aspect-video mb-6 border-2 border-blue-100 shadow-inner">
+          <div className="relative rounded-2xl overflow-hidden bg-black w-full max-w-sm mx-auto mb-6 border-4 border-gray-200">
             <Webcam
               audio={false}
               ref={webcamRef}
               screenshotFormat="image/jpeg"
               videoConstraints={{ facingMode: "user" }}
-              className="w-full h-full object-cover transform scale-x-[-1]" // Mirror effect
+              className="w-full h-auto object-cover transform scale-x-[-1] block"
             />
+            
+            {/* ========================================== */}
+            {/* OVERLAY GUIDE BOX RESPONSIF (UI CSS MURNI) */}
+            {/* ========================================== */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <div 
+                className="border-4 border-yellow-400 border-dashed rounded-[20%] transition-all duration-300 relative overflow-hidden"
+                style={{
+                  width: '65%',             // Lebar 65% dari layar video
+                  maxWidth: '280px',        // Maksimal ukuran untuk Laptop
+                  aspectRatio: '1 / 1.3',   // Rasio Wajah Manusia
+                  boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)' // Gelap di luar kotak
+                }}
+              >
+                {/* Efek Garis Scanner Animasi (Opsional) */}
+                <div className="w-full h-1 bg-yellow-400/50 blur-sm absolute top-0 animate-[ping_2s_ease-in-out_infinite]"></div>
+              </div>
+            </div>
+            {/* ========================================== */}
+
           </div>
         )}
 
@@ -115,8 +135,8 @@ export default function EnrollPage() {
 
         {/* Pesan Error/Info */}
         {message && !isSuccess && (
-          <div className={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 ${message.includes('Gagal') ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-            {message.includes('Gagal') && <AlertTriangle size={16}/>}
+          <div className={`mt-4 p-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all ${message.includes('Gagal') || message.includes('Wajah') || message.includes('Dikit') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-50 text-blue-600'}`}>
+            {(message.includes('Gagal') || message.includes('Wajah') || message.includes('Dikit')) && <AlertTriangle size={18}/>}
             {message}
           </div>
         )}
