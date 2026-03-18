@@ -1,33 +1,30 @@
 import numpy as np
-import cv2
-import onnxruntime as ort
+import insightface
+from insightface.utils import face_align
 
 class FaceService:
     def __init__(self, model_path="models/w600k_mbf.onnx"):
         try:
-            self.session = ort.InferenceSession(model_path)
-            self.input_name = self.session.get_inputs()[0].name
-            self.input_shape = self.session.get_inputs()[0].shape
-            print(f"OK ONNX model loaded: {model_path}")
+            self.rec_model = insightface.model_zoo.get_model(model_path, providers=['CPUExecutionProvider'])
+            self.rec_model.prepare(ctx_id=0)
+            print(f"OK InsightFace Recognition model loaded: {model_path}")
         except Exception as e:
-            print(f"Failed to load ONNX model: {e}")
-            self.session = None
+            print(f"Failed to load Recognition model: {e}")
+            self.rec_model = None
 
-    def preprocess(self, img_bgr):
-        img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-        img_resized = cv2.resize(img_rgb, (112, 112))
-        img_norm = (img_resized.astype(np.float32) - 127.5) / 128.0
-        img_transposed = np.transpose(img_norm, (2,0,1))
-        img_batch = np.expand_dims(img_transposed, axis=0).astype(np.float32)
-        return img_batch
-
-    def get_embedding(self, img_bgr):
-        if self.session is None: return None
-        img_input = self.preprocess(img_bgr)
+    def get_embedding(self, img_bgr, kps):
+        if self.rec_model is None: return None
         try:
-            emb = self.session.run(None, {self.input_name: img_input})[0].flatten()
+            # 1. Lakukan Pelurusan Wajah KELAS DUNIA (norm_crop)
+            aligned_face = face_align.norm_crop(img_bgr, landmark=kps, image_size=112)
+            
+            # 2. Ekstrak Fitur AI
+            emb = self.rec_model.get_feat(aligned_face)[0]
+            
+            # 3. Lakukan Normalisasi (Wajib agar skala skor Cosine tetap 0-1)
             norm = np.linalg.norm(emb)
-            if norm>0: emb /= norm
+            if norm > 0:
+                emb = emb / norm
             return emb
         except Exception as e:
             print("Get embedding error:", e)

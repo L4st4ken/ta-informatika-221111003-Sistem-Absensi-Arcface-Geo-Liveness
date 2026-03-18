@@ -1,16 +1,13 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from database.connection import get_db
-from services.face_detector import FaceDetector
 from services.face_service import face_service
-from services.liveness_manager import LivenessManager
+from services.liveness_service import LivenessService # <-- IMPORT BARU KITA
 from utils.validation import decode_image, calculate_face_similarity, validate_geofence
 from utils.crypto import decrypt_embedding
 from models.models import FaceEmbedding, AttendanceLog, User, Branch, Shift, Schedule
-from datetime import datetime, date, time, timedelta
-import dlib
+from datetime import datetime, timedelta
 import cv2
 import json
 import numpy as np
@@ -18,9 +15,8 @@ from config import Config
 
 face_bp = Blueprint("face_bp", __name__, url_prefix="/face")
 
-detector = FaceDetector(model_dir="models", model_name="det_500m.onnx")
-predictor = dlib.shape_predictor(Config.DLIB_LANDMARK_PATH)
-liveness_mgr = LivenessManager(predictor)
+# Inisialisasi Service Baru yang sudah mencakup Detektor & Liveness
+liveness_service = LivenessService() 
 
 def get_wib_time():
     return datetime.utcnow() + timedelta(hours=7)
@@ -28,27 +24,20 @@ def get_wib_time():
 def check_face_alignment(face_box, img_w, img_h):
     fx1, fy1, fx2, fy2 = face_box
     
-    # 1. Deteksi Orientasi Kamera (Responsive Logic)
     is_portrait = img_h > img_w
-    
-    # Rasio ideal wajah manusia adalah sekitar 1 : 1.3 (Lebar : Tinggi)
     if is_portrait:
-        # Jika di HP (Portrait): Jadikan LEBAR layar sebagai patokan
-        box_w = int(img_w * 0.65)   # Kotak mengambil 65% dari lebar HP
-        box_h = int(box_w * 1.3)    # Tingginya mengikuti rasio 1.3 dari lebar
+        box_w = int(img_w * 0.65)  
+        box_h = int(box_w * 1.3)   
     else:
-        # Jika di Laptop (Landscape): Jadikan TINGGI layar sebagai patokan
-        box_h = int(img_h * 0.65)   # Kotak mengambil 65% dari tinggi Laptop
-        box_w = int(box_h / 1.3)    # Lebarnya mengikuti rasio pembagian 1.3
+        box_h = int(img_h * 0.65)  
+        box_w = int(box_h / 1.3)   
 
-    # 2. Hitung Koordinat Kotak agar Pas di Tengah Layar
     gx1 = (img_w - box_w) // 2
     gy1 = (img_h - box_h) // 2
     gx2 = gx1 + box_w
     gy2 = gy1 + box_h
     guide_box = [gx1, gy1, gx2, gy2]
 
-    # 3. Hitung Titik Tengah Wajah vs Titik Tengah Kotak
     fcx = (fx1 + fx2) // 2
     fcy = (fy1 + fy2) // 2
     gcx = (gx1 + gx2) // 2
@@ -57,26 +46,21 @@ def check_face_alignment(face_box, img_w, img_h):
     diff_x = abs(fcx - gcx)
     diff_y = abs(fcy - gcy)
     
-    # Toleransi melenceng (15% dari ukuran layar)
     limit_x = img_w * 0.15 
     limit_y = img_h * 0.15
 
     if diff_x > limit_x or diff_y > limit_y:
         return False, "Paskan Wajah di Tengah Kotak!", guide_box
 
-    # 4. Validasi Jarak (Zoom)
     face_h = fy2 - fy1
-    if face_h < box_h * 0.45: # Toleransi jarak agar di HP tidak perlu terlalu nempel
+    if face_h < box_h * 0.45: 
         return False, "Maju Dikit (Wajah Terlalu Jauh)", guide_box
         
     return True, "OK", guide_box
 
-@face_bp.route("/liveness/start", methods=["POST"])
-@jwt_required()
-def start_liveness():
-    user_id = get_jwt_identity()
-    session = liveness_mgr.start_session(user_id)
-    return jsonify({"msg": "session started", "target_blinks": session.target_blinks}), 200
+# =====================================================================
+# ENDPOINT /liveness/start DIHAPUS KARENA SUDAH TIDAK PERLU KEDIP LAGI
+# =====================================================================
 
 @face_bp.route("/liveness/frame", methods=["POST"])
 @jwt_required()
@@ -91,72 +75,75 @@ def liveness_frame():
     lat_attempt = data.get("latitude")
     lon_attempt = data.get("longitude")
     
-    # 1. AMBIL INTENT DARI FRONTEND
     action_type = data.get("action_type", "check_in")
     alasan_note = data.get("note", "").strip()
 
-    boxes = detector.detect_faces(img)
-    if not boxes: return jsonify({"status": "no_face", "msg": "Wajah tidak ditemukan"}), 200
+    # -----------------------------------------------------------------
+    # TAHAP 1: DETEKSI & CEK LIVENESS (SEKALIGUS!)
+    # -----------------------------------------------------------------
+    liveness_result = liveness_service.check_liveness(img)
 
-    box = detector.pick_largest(boxes)
+    # 1a. Jika tidak ada wajah
+    if not liveness_result["bbox"]:
+        return jsonify({"status": "no_face", "msg": "Wajah tidak ditemukan"}), 200
+
+    # 1b. Jika terdeteksi foto palsu / layar HP (SPOOFING)
+    if not liveness_result["is_live"]:
+        return jsonify({
+            "status": "spoofing", 
+            "msg": liveness_result["msg"], # Pesan: "Spoofing Terdeteksi!"
+            "liveness_score": liveness_result["score"]
+        }), 200
+
+    # 1c. Wajah asli (Live)! Ambil datanya
+    box = liveness_result["bbox"]
+    kps = liveness_result["kpss"] 
     x1, y1, x2, y2 = box
     face_box_coords = [int(x1), int(y1), int(x2), int(y2)]
 
+    # -----------------------------------------------------------------
+    # TAHAP 2: CEK POSISI WAJAH (ALIGNMENT)
+    # -----------------------------------------------------------------
     h, w, _ = img.shape
     is_aligned, align_msg, guide_box_coords = check_face_alignment(box, w, h)
 
-    session = liveness_mgr.get_session(user_id)
-    if not session: session = liveness_mgr.start_session(user_id)
-
     if not is_aligned:
         return jsonify({
-            "status": "position_error", "msg": align_msg,
-            "face_box": face_box_coords, "guide_box": guide_box_coords,
-            "current_blinks": 0, "target_blinks": session.target_blinks
+            "status": "position_error", 
+            "msg": align_msg,
+            "face_box": face_box_coords, 
+            "guide_box": guide_box_coords
+            # Hapus data blink, karena sudah tidak digunakan frontend
         }), 200
 
-    face_rect = dlib.rectangle(int(x1), int(y1), int(x2), int(y2))
-    session.update_seen()
-    passed = session.ls.process_frame(img, face_rect)
-    current_blinks = session.ls.blink_count
-    session.last_frame = detector.crop_face(img, box, margin=0.25)
-
-    if not passed:
-        return jsonify({
-            "status": "processing",
-            "msg": f"Kedip sekarang! ({current_blinks}/{session.target_blinks})",
-            "current_blinks": current_blinks, "target_blinks": session.target_blinks,
-            "face_box": face_box_coords, "guide_box": guide_box_coords
-        }), 200
-
-    crop = session.last_frame
-    captured_embedding = face_service.get_embedding(crop)
+    # -----------------------------------------------------------------
+    # TAHAP 3: EKSTRAKSI WAJAH & PENCOCOKAN
+    # -----------------------------------------------------------------
+    captured_embedding = face_service.get_embedding(img, kps)
     if captured_embedding is None: return jsonify({"status": "error", "msg": "failed_extract_embedding"}), 500
 
     user = db.query(User).filter_by(user_id=user_id).first()
     record = db.query(FaceEmbedding).filter_by(user_id=user_id).first()
     
     if not record:
-        liveness_mgr.end_session(user_id)
         return jsonify({"status": "error", "msg": "Belum registrasi wajah!"}), 404
 
     try:
         stored_json = decrypt_embedding(record.embedding_data)
         stored_embedding = json.loads(stored_json)
     except:
-        liveness_mgr.end_session(user_id)
         return jsonify({"status": "error", "msg": "Decryption failed"}), 500
 
     score, ok_face = calculate_face_similarity(stored_embedding, captured_embedding, threshold=Config.ARCFACE_THRESHOLD)
     msg_response = "Wajah Tidak Cocok" 
 
     # === [CORE BUSINESS LOGIC - EXPLICIT INTENT] ===
+    # (Logika absen gantung 18 jam, geofence, jadwal, tidak ada yang berubah!)
     if ok_face:
         current_dt = get_wib_time() 
         current_time_obj = current_dt.time()
         today = current_dt.date()
 
-        # 1. ANTI SPAM
         recent_log = db.query(AttendanceLog).filter(
             AttendanceLog.user_id == user_id,
             AttendanceLog.timestamp_attempt >= (current_dt - timedelta(seconds=10))
@@ -169,9 +156,6 @@ def liveness_frame():
                 "final_status": recent_log.final_status
             }), 200
 
-        # =========================================================
-        # 2. CARI LOG GANTUNG & TERAPKAN ATURAN 18 JAM (PINDAH KE ATAS)
-        # =========================================================
         open_log = db.query(AttendanceLog).filter(
             AttendanceLog.user_id == user_id,
             AttendanceLog.check_out_time == None,
@@ -184,20 +168,15 @@ def liveness_frame():
                 open_log.attendance_status = 'Lupa Pulang'
                 open_log.keterangan = 'Ditutup Otomatis (Melewati 18 Jam)'
                 db.commit()
-                open_log = None # Reset agar dianggap tidak punya sesi aktif
+                open_log = None 
 
-        # =========================================================
-        # 3. TENTUKAN JADWAL TARGET BERDASARKAN INTENT (MASUK/PULANG)
-        # =========================================================
         assigned_branches = []
         jam_masuk_target = None  
         jam_pulang_target = None 
         
-        # --- JALUR KHUSUS CHECK-OUT ---
         if action_type == "check_out" and open_log:
-            assigned_branches = [open_log.checkin_branch_id] # Kunci lokasi ke tempat dia masuk
+            assigned_branches = [open_log.checkin_branch_id] 
             
-            # Cari jam pulangnya untuk nentuin status (Pulang Cepat / Tepat Waktu)
             sched = db.query(Schedule).filter_by(
                 user_id=user_id, tanggal=today, branch_id=open_log.checkin_branch_id, is_active=True
             ).first()
@@ -206,13 +185,11 @@ def liveness_frame():
             elif user.shift:
                 jam_pulang_target = user.shift.jam_pulang
 
-        # --- JALUR KETAT CHECK-IN ---
         else:
             todays_schedules = db.query(Schedule).filter_by(user_id=user_id, tanggal=today, is_active=True).all()
             if todays_schedules:
                 active_schedule_found = False
                 for sched in todays_schedules:
-                    # Buka absen 1 jam sebelum jam_mulai
                     waktu_buka = (datetime.combine(today, sched.jam_mulai) - timedelta(hours=1)).time()
                     waktu_tutup = sched.jam_selesai
                     
@@ -235,9 +212,6 @@ def liveness_frame():
                 jam_pulang_target = user.shift.jam_pulang
                 if user.branch_id: assigned_branches = [user.branch_id]
 
-        # =========================================================
-        # 4. CEK LOKASI GEOFENCE
-        # =========================================================
         detected_branch_id = None
         is_in_valid_location = False
 
@@ -251,11 +225,7 @@ def liveness_frame():
                     detected_branch_id = br.branch_id
                     break 
 
-        # =========================================================
-        # 5. EKSEKUSI PENYIMPANAN KE DATABASE
-        # =========================================================
         try:
-            # === JIKA USER KLIK TOMBOL: ABSEN PULANG ===
             if action_type == "check_out":
                 if not open_log:
                     ok_face = False
@@ -283,7 +253,6 @@ def liveness_frame():
                             open_log.attendance_status = 'Tepat Waktu'
                             msg_response = "Check-Out Berhasil!"
                             
-            # === JIKA USER KLIK TOMBOL: ABSEN MASUK ===
             elif action_type == "check_in":
                 if open_log:
                     ok_face = False
@@ -315,7 +284,6 @@ def liveness_frame():
                             msg_response = f"Ditolak! Lokasi salah. Target: {target_name}"
                             alasan_gagal = "Gagal Lokasi"
                         else:
-                            # PROSES ABSEN MASUK SUKSES
                             status_hadir = "Tepat Waktu"
                             teks_keterangan = "Check-In Tepat Waktu"
                             limit_dt = target_dt + timedelta(minutes=15)
@@ -335,7 +303,6 @@ def liveness_frame():
                             db.add(new_log)
                             msg_response = f"Check-In Berhasil ({status_hadir})"
 
-                    # CATAT AUDIT TRAIL JIKA GAGAL
                     if not ok_face and alasan_gagal:
                         new_log = AttendanceLog(
                             user_id=user_id, 
@@ -357,8 +324,6 @@ def liveness_frame():
             db.rollback()
             current_app.logger.error(f"DB Error: {e}")
             return jsonify({"status": "error", "msg": str(e)}), 500
-
-    liveness_mgr.end_session(user_id)
 
     return jsonify({
         "status": "liveness_passed",

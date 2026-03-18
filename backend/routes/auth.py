@@ -186,11 +186,13 @@ def upload_embedding():
     # ==========================================
     # LOGIKA BARU: DETEKSI DAN CROP WAJAH DULU!
     # ==========================================
-    boxes = detector.detect_faces(img)
-    if not boxes:
+    faces = detector.detect_faces(img)
+    if not faces:
         return jsonify({"error": "Wajah tidak terdeteksi di kamera!"}), 400
 
-    box = detector.pick_largest(boxes)
+    largest_face = detector.pick_largest(faces)
+    box = largest_face["box"]
+    kps = largest_face["kps"] # Ambil titik kunci wajah
     
     # --- TAMBAHAN: VALIDASI KOTAK KUNING ---
     h, w, _ = img.shape
@@ -200,11 +202,8 @@ def upload_embedding():
         return jsonify({"error": align_msg}), 400 # Tolak jika wajah melenceng/terlalu jauh
     # ---------------------------------------
 
-    # Jika wajah sudah pas di tengah, baru di-crop
-    crop_img = detector.crop_face(img, box, margin=0.25)
-
-    # Ekstrak embedding dari wajah yang SUDAH DICROP
-    embedding = face_service.get_embedding(crop_img)
+    # Ekstrak embedding menggunakan gambar asli dan kps (agar diluruskan presisi oleh norm_crop)
+    embedding = face_service.get_embedding(img, kps)
     # ==========================================
 
     if embedding is None:
