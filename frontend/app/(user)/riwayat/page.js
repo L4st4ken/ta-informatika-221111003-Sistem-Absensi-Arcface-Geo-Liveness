@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, Clock, MapPin, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, ArrowRightLeft, ShieldAlert, CheckCircle2, FileText } from 'lucide-react';
 
 export default function RiwayatPage() {
   const router = useRouter();
@@ -13,12 +13,15 @@ export default function RiwayatPage() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) { router.push('/'); return; }
+        const token = localStorage.getItem('access_token');
+        if (!token) { router.push('/login'); return; }
 
-        const res = await axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/attendance/history', {
+        const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; 
+
+        const res = await axios.get(`${API_URL}/attendance/history`, {
           headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
+        
         setLogs(res.data);
         setLoading(false);
       } catch (err) {
@@ -32,57 +35,99 @@ export default function RiwayatPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-20">
       {/* Header */}
-      <div className="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm mb-4 sticky top-0 z-10">
-        <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-gray-100 rounded-full">
-          <ArrowLeft size={20} />
+      <div className="max-w-3xl mx-auto flex items-center gap-4 bg-white p-4 rounded-2xl shadow-sm mb-6 sticky top-4 z-10 border border-gray-100">
+        <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-gray-100 rounded-full transition">
+          <ArrowLeft size={20} className="text-gray-700"/>
         </button>
-        <h1 className="text-lg font-bold text-gray-800">Riwayat Absensi</h1>
+        <div>
+          <h1 className="text-lg font-black text-gray-800">Riwayat Aktivitas</h1>
+          <p className="text-xs text-gray-500 font-medium">30 Transaksi absensi terakhir Anda.</p>
+        </div>
       </div>
 
-      {/* List */}
-      <div className="space-y-3">
+      {/* List / Timeline */}
+      <div className="max-w-3xl mx-auto space-y-4">
         {loading ? (
-          <p className="text-center text-gray-400 mt-10">Memuat data...</p>
+          <div className="flex flex-col items-center justify-center mt-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+            <p className="text-gray-500 text-sm font-medium">Menarik log dari server...</p>
+          </div>
         ) : logs.length > 0 ? (
           logs.map((log) => (
-            <div key={log.log_id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2 text-gray-700 font-bold">
-                  <Calendar size={16} className="text-blue-500" />
-                  {log.tanggal}
+            <div key={log.log_id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition group">
+              
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center gap-2 text-gray-800 font-bold bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100">
+                  <Calendar size={14} className="text-blue-600" />
+                  <span className="text-xs uppercase tracking-wider">{log.tanggal}</span>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full font-bold ${
-                  log.status === 'Tepat Waktu' ? 'bg-green-100 text-green-700' : 
-                  log.status === 'Terlambat' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                
+                {/* Status Validasi AI */}
+                {log.status === 'Success' ? (
+                  <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md font-bold bg-green-50 text-green-700 border border-green-200">
+                    <CheckCircle2 size={12} /> DITERIMA
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-md font-bold bg-red-50 text-red-700 border border-red-200">
+                    <ShieldAlert size={12} /> DITOLAK
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-4 text-sm">
+                {/* Indikator IN/OUT */}
+                <div className={`p-4 rounded-xl flex-shrink-0 flex items-center justify-center border ${
+                  log.tipe === 'IN' ? 'bg-blue-50 text-blue-600 border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors' 
+                                    : 'bg-orange-50 text-orange-600 border-orange-100 group-hover:bg-orange-500 group-hover:text-white transition-colors'
                 }`}>
-                  {log.status}
-                </span>
+                  <ArrowRightLeft size={24} className={log.tipe === 'IN' ? 'rotate-90' : '-rotate-90'} />
+                </div>
+                
+                <div className="flex-1">
+                  <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-1">Aktivitas</p>
+                  <p className={`text-lg font-black ${log.tipe === 'IN' ? 'text-blue-700' : 'text-orange-700'}`}>
+                    ABSEN {log.tipe === 'IN' ? 'MASUK' : 'PULANG'}
+                  </p>
+                </div>
+
+                <div className="text-right">
+                  <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest mb-1">Waktu</p>
+                  <p className="font-mono font-bold text-gray-800 text-lg flex items-center gap-1.5 justify-end">
+                    <Clock size={16} className="text-gray-400"/> {log.jam}
+                  </p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-sm mt-3">
-                <div>
-                  <p className="text-gray-400 text-xs mb-1">Jam Masuk</p>
-                  <p className="font-mono font-bold text-gray-800">{log.jam_masuk}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 text-xs mb-1">Jam Pulang</p>
-                  <p className="font-mono font-bold text-gray-800">{log.jam_pulang}</p>
-                </div>
+              {/* Jarak GPS */}
+              <div className="mt-4 pt-3 border-t border-gray-50 flex items-center gap-2 text-xs text-gray-500 font-medium">
+                <MapPin size={14} className="text-indigo-500 flex-shrink-0" />
+                Akurasi Koordinat: <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{log.jarak}</span>
               </div>
 
-              <div className="mt-3 pt-3 border-t border-gray-50 flex justify-between items-center text-xs text-gray-500">
-                <div className="flex items-center gap-1">
-                  <MapPin size={12} /> {log.cabang}
+              {/* Kotak Laporan Kegiatan (SUDAH DIPERBAIKI) */}
+              {log.laporan && (
+                <div className="mt-3 bg-gray-50 p-3.5 rounded-xl border border-gray-100 flex gap-3 items-start transition-all hover:bg-gray-100/50">
+                  <div className="bg-white p-1.5 rounded-lg border border-gray-200 shadow-sm flex-shrink-0 mt-0.5">
+                    <FileText size={16} className="text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Catatan Laporan Lapangan</p>
+                    <p className="text-gray-700 text-sm italic leading-relaxed">
+                      &quot;{log.laporan}&quot;
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Clock size={12} /> Durasi: {log.durasi}
-                </div>
-              </div>
+              )}
+
             </div>
           ))
         ) : (
-          <div className="text-center mt-10">
-            <p className="text-gray-400">Belum ada riwayat absensi.</p>
+          <div className="text-center mt-20 p-10 bg-white rounded-2xl border border-gray-100 border-dashed">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+              <Calendar size={24} />
+            </div>
+            <h3 className="font-bold text-gray-800 mb-1">Belum Ada Aktivitas</h3>
+            <p className="text-gray-500 text-sm font-medium">Riwayat absensi Anda akan muncul di sini setelah Anda melakukan Absen Masuk/Pulang.</p>
           </div>
         )}
       </div>

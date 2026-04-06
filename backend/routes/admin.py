@@ -2,29 +2,52 @@ from flask import Blueprint, request, jsonify, current_app, send_file
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, extract
 from database.connection import get_db
-from models.models import Schedule, User, Branch, AttendanceLog, Shift
+from models.models import User, Branch, AttendanceLog, FaceEmbedding
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from werkzeug.security import generate_password_hash
 from functools import wraps
 from datetime import date, datetime, timedelta
 import pandas as pd
 import calendar
+import os
 from openpyxl.utils import get_column_letter
 from io import BytesIO
 
+# --- IMPORT SERVICE AI ---
+from services.face_detector import FaceDetector
+from services.face_service import extract_arcface_vector
+from services.liveness_service import LivenessService # WAJIB ADA INI
+
+import numpy as np
+import cv2
+import base64
+
 admin_bp = Blueprint("admin_bp", __name__, url_prefix="/admin")
+
+# Inisialisasi Service
+face_detector = FaceDetector()
+liveness_svc = LivenessService() # Sekarang ini tidak akan error
+
+def decode_base64_to_bgr(base64_string):
+    if "," in base64_string:
+        base64_string = base64_string.split(",")[1]
+    img_data = base64.b64decode(base64_string)
+    nparr = np.frombuffer(img_data, np.uint8)
+    return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
 # --- MIDDLEWARE: ADMIN ONLY ---
 def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         claims = get_jwt()
-        if claims.get("role") != "admin":
-            return jsonify({"error": "Admin access required"}), 403
+        if claims.get("role") != "admin": 
+            return jsonify({"error": "Akses ditolak! Hanya Admin HRD."}), 403
         return fn(*args, **kwargs)
     return wrapper
 
-# --- DASHBOARD STATS (PENTING BUAT FRONTEND) ---
+# ==========================================
+# 1. DASHBOARD STATS & LIVE FEED (DENGAN FILTER & KOORDINAT PETA)
+# ==========================================
 @admin_bp.route("/dashboard-stats", methods=["GET"])
 @jwt_required()
 @admin_required
@@ -32,79 +55,122 @@ def admin_stats():
     db: Session = next(get_db())
     today = date.today()
 
-    # 1. Statistik
-    total_karyawan = db.query(User).count()
-    hadir_today = db.query(AttendanceLog).filter(
-        func.date(AttendanceLog.timestamp_attempt) == today
-    ).count()
-    terlambat_today = db.query(AttendanceLog).filter(
-        func.date(AttendanceLog.timestamp_attempt) == today,
-        AttendanceLog.attendance_status == 'Terlambat'
-    ).count()
-
-    # 2. Live Feed
-    logs = db.query(AttendanceLog).order_by(desc(AttendanceLog.timestamp_attempt)).limit(10).all()
+    # 1. Hitung Statistik (Tetap Global, tidak terpengaruh filter feed)
+    total_karyawan = db.query(User).filter(User.role == 'karyawan').count()
     
+    hadir_today = db.query(AttendanceLog.user_id).filter(
+        func.date(AttendanceLog.timestamp) == today,
+        AttendanceLog.attempt_type == 'IN',
+        AttendanceLog.status == 'Success'
+    ).distinct().count()
+
+    # 2. Tangkap Parameter Filter dari URL (Frontend)
+    filter_nama = request.args.get("nama")
+    filter_cabang = request.args.get("cabang_id")
+
+    # 3. Base Query untuk Live Feed (Join dengan User agar bisa baca nama)
+    query = db.query(AttendanceLog).join(User)
+
+    # 4. Terapkan Filter Jika Parameter Dikirim
+    if filter_nama:
+        # ilike() digunakan agar pencarian tidak sensitif huruf besar/kecil (case-insensitive)
+        query = query.filter(User.nama_lengkap.ilike(f"%{filter_nama}%"))
+        
+    if filter_cabang:
+        query = query.filter(AttendanceLog.attempted_branch_id == int(filter_cabang))
+
+    # 5. Eksekusi Query (Ambil yang terbaru, limit diperbesar jadi 50 karena ada filter)
+    logs = query.order_by(desc(AttendanceLog.timestamp)).limit(50).all()
+    
+    # 6. Format ke JSON
     live_feed = []
     for log in logs:
-        cabang_nama = log.checkin_branch.nama_cabang if log.checkin_branch else "Unknown"
-        if log.checkout_branch:
-            cabang_nama = f"{cabang_nama} -> {log.checkout_branch.nama_cabang}"
-
+        cabang_nama = log.branch.nama_cabang if log.branch else "Dinas Luar (Bypass)"
         live_feed.append({
             "nama": log.user.nama_lengkap,
-            "role": log.user.role,
-            "jam": log.timestamp_attempt.strftime("%H:%M"),
+            "role": "Fleksibel" if log.user.marketing_flexible else "Statis",
+            "tipe": log.attempt_type,
+            "jam": (log.timestamp + timedelta(hours=7)).strftime("%H:%M"),
             "lokasi": cabang_nama,
-            "status": log.attendance_status,
-            "final_status": log.final_status
+            "status_akhir": log.status,
+            
+            # --- TAMBAHAN BARU UNTUK GOOGLE MAPS ---
+            "lat": float(log.latitude_attempt) if log.latitude_attempt is not None else None,
+            "lng": float(log.longitude_attempt) if log.longitude_attempt is not None else None,
+            "laporan": log.laporan_kegiatan
         })
 
     return jsonify({
         "stats": {
             "total_user": total_karyawan,
             "hadir": hadir_today,
-            "terlambat": terlambat_today,
-            "alpha": total_karyawan - hadir_today
+            "alpha": max(0, total_karyawan - hadir_today)
         },
         "feed": live_feed
-    })
-
-# --- USER CRUD ---
+    }), 200
+# ==========================================
+# 2. USER CRUD (DENGAN TRIPLE THREAT AI)
+# ==========================================
 @admin_bp.route("/users", methods=["POST"])
 @jwt_required()
-@admin_required
+@admin_required # Menggunakan middleware agar konsisten
 def create_user():
     db: Session = next(get_db())
     data = request.json
     
-    # Validasi Input
-    if not all(k in data for k in ("nama_lengkap", "email", "password")):
-        return jsonify({"error": "Missing required fields"}), 400
+    if not all(k in data for k in ("nik", "nama_lengkap", "email", "password", "image_base64")):
+        return jsonify({"error": "Data tidak lengkap. Foto wajah wajib ada."}), 400
+    
+    if db.query(User).filter(User.nik == data.get("nik")).first():
+        return jsonify({"error": "NIK sudah terdaftar."}), 400
 
     if db.query(User).filter(User.email == data.get("email")).first():
-        return jsonify({"error": "Email already exists"}), 400
+        return jsonify({"error": "Email sudah terdaftar."}), 400
 
-    # Auto Assign Shift Default jika tidak dipilih
-    shift_id = data.get("shift_id")
-    if not shift_id:
-        default_shift = db.query(Shift).first()
-        shift_id = default_shift.shift_id if default_shift else None
+    try:
+        img_bgr = decode_base64_to_bgr(data.get("image_base64"))
+        
+        # 1. Detection
+        faces = face_detector.detect_faces(img_bgr)
+        if not faces: 
+            return jsonify({"error": "Wajah tidak ditemukan"}), 422
+        
+        # 2. Liveness (PENTING!)
+        if not liveness_svc.check_liveness(img_bgr)["is_live"]:
+            return jsonify({"error": "Ditolak! Harap gunakan wajah asli karyawan."}), 403
+            
+        # 3. Embedding
+        largest_face = face_detector.pick_largest(faces)
+        kpss = largest_face["kps"]
+        face_vector = extract_arcface_vector(img_bgr, kpss)
+        
+        if face_vector is None:
+            return jsonify({"error": "Gagal mengekstrak fitur wajah."}), 400
+            
+    except Exception as e:
+        return jsonify({"error": f"Error AI: {str(e)}"}), 500
 
+    is_flexible = data.get("marketing_flexible", False)
     user = User(
+        nik=data.get("nik"),
         nama_lengkap=data.get("nama_lengkap"),
         email=data.get("email"),
         password_hash=generate_password_hash(data.get("password")),
         role=data.get("role", "karyawan"),
-        branch_id=data.get("branch_id"),
-        shift_id=shift_id
+        branch_id=None if is_flexible else data.get("branch_id"),
+        marketing_flexible=is_flexible
     )
     
     try:
         db.add(user)
-        db.commit()
-        db.refresh(user)
-        return jsonify({"msg": "User created", "user_id": user.user_id}), 201
+        db.flush() 
+        
+        embedding_blob = face_vector.tobytes()
+        new_embedding = FaceEmbedding(user_id=user.user_id, embedding_data=embedding_blob)
+        
+        db.add(new_embedding)
+        db.commit() 
+        return jsonify({"msg": "User & Biometrik Berhasil!", "user_id": user.user_id}), 201
     except Exception as e:
         db.rollback()
         return jsonify({"error": str(e)}), 500
@@ -115,90 +181,53 @@ def create_user():
 def list_users():
     db: Session = next(get_db())
     users = db.query(User).all()
-    result = [{
+    return jsonify([{
         "user_id": u.user_id,
         "nama_lengkap": u.nama_lengkap,
         "email": u.email,
         "role": u.role,
-        "branch": u.branch.nama_cabang if u.branch else "-"
-    } for u in users]
-    return jsonify(result), 200
-
-@admin_bp.route("/users/<int:target_user_id>", methods=["PUT"])
-@jwt_required()
-@admin_required
-def update_user(target_user_id):
-    db: Session = next(get_db())
-    user = db.query(User).filter_by(user_id=target_user_id).first()
-    
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    data = request.json
-    if "nama_lengkap" in data: user.nama_lengkap = data["nama_lengkap"]
-    if "email" in data: user.email = data["email"]
-    if "password" in data: user.password_hash = generate_password_hash(data["password"])
-    if "role" in data: user.role = data["role"]
-    if "branch_id" in data: user.branch_id = data["branch_id"]
-    if "shift_id" in data: user.shift_id = data["shift_id"]
-
-    try:
-        db.commit()
-        return jsonify({"msg": "User updated"}), 200
-    except Exception as e:
-        db.rollback()
-        return jsonify({"error": str(e)}), 500
+        "branch": u.branch.nama_cabang if u.branch else "Fleksibel (Semua Area)",
+        "marketing_flexible": u.marketing_flexible
+    } for u in users]), 200
 
 @admin_bp.route("/users/<int:target_user_id>", methods=["DELETE"])
 @jwt_required()
 @admin_required
 def delete_user(target_user_id):
     db: Session = next(get_db())
-    current_admin_id = get_jwt_identity()
-    if str(target_user_id) == str(current_admin_id):
-        return jsonify({"error": "Cannot delete yourself"}), 400
+    if str(target_user_id) == str(get_jwt_identity()):
+        return jsonify({"error": "Tidak bisa menghapus akun sendiri"}), 400
 
     user = db.query(User).filter_by(user_id=target_user_id).first()
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    if not user: return jsonify({"error": "User tidak ditemukan"}), 404
         
     try:
         db.delete(user)
         db.commit()
         return jsonify({"message": "User deleted"}), 200
     except Exception as e:
-        db.rollback()
-        return jsonify({"error": str(e)}), 500
+        db.rollback(); return jsonify({"error": str(e)}), 500
 
-# --- BRANCH CRUD ---
+# ==========================================
+# 3. BRANCH CRUD
+# ==========================================
 @admin_bp.route("/branches", methods=["POST"])
 @jwt_required()
 @admin_required
 def create_branch():
     db: Session = next(get_db())
     data = request.json
-    
-    name = data.get("nama_cabang") or data.get("branch_name") 
-    latitude = data.get("latitude")
-    longitude = data.get("longitude")
-    radius = data.get("radius_meter", 50)
-
-    if not all([name, latitude, longitude]):
-        return jsonify({"error": "Missing name, lat, or lon"}), 400
-
     branch = Branch(
-        nama_cabang=name,
-        latitude=float(latitude),
-        longitude=float(longitude),
-        radius_meter=int(radius)
+        nama_cabang=data.get("nama_cabang"), 
+        latitude=float(data.get("latitude")), 
+        longitude=float(data.get("longitude")), 
+        radius_meter=int(data.get("radius_meter", 50))
     )
     try:
-        db.add(branch)
-        db.commit()
+        db.add(branch); db.commit()
         return jsonify({"msg": "Branch created", "branch_id": branch.branch_id}), 201
     except Exception as e:
-        db.rollback()
-        return jsonify({"error": str(e)}), 500
+        db.rollback(); return jsonify({"error": str(e)}), 500
 
 @admin_bp.route("/branches", methods=["GET"])
 @jwt_required()
@@ -206,366 +235,253 @@ def create_branch():
 def list_branches():
     db: Session = next(get_db())
     branches = db.query(Branch).all()
-    result = [{
-        "branch_id": b.branch_id,
-        "nama_cabang": b.nama_cabang,
-        "latitude": b.latitude,
-        "longitude": b.longitude,
+    return jsonify([{
+        "branch_id": b.branch_id, "nama_cabang": b.nama_cabang,
+        "latitude": float(b.latitude), "longitude": float(b.longitude),
         "radius_meter": b.radius_meter
-    } for b in branches]
-    return jsonify(result), 200
+    } for b in branches]), 200
 
-@admin_bp.route("/branches/<int:branch_id>", methods=["PUT"])
+# ==========================================
+# 4. REPORTING EXCEL
+# ==========================================
+import pandas as pd
+from io import BytesIO
+import calendar
+from datetime import datetime, timedelta, date
+from sqlalchemy import extract
+from flask import send_file, request, jsonify
+# Pastikan import lain yang dibutuhkan sudah ada...
+
+# ==========================================
+# 1. API UNTUK TABEL LAPORAN (REPORT)
+# ==========================================
+@admin_bp.route('/reports', methods=['GET'])
 @jwt_required()
 @admin_required
-def update_branch(branch_id):
-    db: Session = next(get_db())
-    branch = db.query(Branch).filter_by(branch_id=branch_id).first()
-    if not branch:
-        return jsonify({"error": "Branch not found"}), 404
-
-    data = request.json
-    if "nama_cabang" in data: branch.nama_cabang = data["nama_cabang"]
-    if "latitude" in data: branch.latitude = float(data["latitude"])
-    if "longitude" in data: branch.longitude = float(data["longitude"])
-    if "radius_meter" in data: branch.radius_meter = int(data["radius_meter"])
-
-    try:
-        db.commit()
-        return jsonify({"msg": "Branch updated"}), 200
-    except Exception as e:
-        db.rollback()
-        return jsonify({"error": str(e)}), 500
-
-@admin_bp.route("/branches/<int:branch_id>", methods=["DELETE"])
-@jwt_required()
-@admin_required
-def delete_branch(branch_id):
-    db: Session = next(get_db())
-    branch = db.query(Branch).filter_by(branch_id=branch_id).first()
-    if not branch:
-        return jsonify({"error": "Branch not found"}), 404
-
-    try:
-        db.delete(branch)
-        db.commit()
-        return jsonify({"msg": "Branch deleted"}), 200
-    except Exception as e:
-        db.rollback()
-        return jsonify({"error": str(e)}), 500
-
-# --- REPORTING (Admin View - JSON) ---
-@admin_bp.route("/reports", methods=["GET"])
-@jwt_required()
-@admin_required
-def get_attendance_reports():
-    db: Session = next(get_db())
-    
-    # 1. Ambil Parameter Filter
+def get_reports():
+    db = next(get_db())
     sekarang = datetime.utcnow() + timedelta(hours=7)
-    filter_month = request.args.get('month', sekarang.month, type=int)
-    filter_year = request.args.get('year', sekarang.year, type=int)
-    filter_branch = request.args.get('branch_id')
     
-    # 2. Tentukan Rentang Hari
-    _, num_days = calendar.monthrange(filter_year, filter_month)
-    if filter_year == sekarang.year and filter_month == sekarang.month:
-        end_day = sekarang.day # Stop di hari ini jika bulan berjalan
-    else:
-        end_day = num_days
+    bulan_target = request.args.get('month', sekarang.month, type=int)
+    tahun_target = request.args.get('year', sekarang.year, type=int)
+    branch_id = request.args.get('branch_id', type=int)
 
-    # 3. Ambil Semua User Kecuali Admin
-    all_users = db.query(User).filter(User.role != 'admin').all()
+    # Base query untuk mencari absen sukses di bulan tersebut
+    query = db.query(AttendanceLog).filter(
+        extract('month', AttendanceLog.timestamp) == bulan_target,
+        extract('year', AttendanceLog.timestamp) == tahun_target,
+        AttendanceLog.status == 'Success'
+    )
 
-    # 4. Ambil Log Absensi Bulan Tersebut
-    logs = db.query(AttendanceLog).filter(
-        extract('month', AttendanceLog.timestamp_attempt) == filter_month,
-        extract('year', AttendanceLog.timestamp_attempt) == filter_year
-    ).all()
-
-    # Kelompokkan Log
-    logs_dict = {}
-    for log in logs:
-        log_date = log.timestamp_attempt.date()
-        key = (log.user_id, log_date)
-        if key not in logs_dict:
-            logs_dict[key] = []
-        logs_dict[key].append(log)
-
-    report_data = []
-
-    # 5. CROSS-CHECK UNTUK TAMPILAN WEB
-    for day in range(1, end_day + 1):
-        current_date = date(filter_year, filter_month, day)
-        is_weekend = current_date.weekday() >= 5
+    # Filter by Cabang (Jika HRD memilih dropdown cabang)
+    if branch_id:
+        query = query.filter(AttendanceLog.attempted_branch_id == branch_id)
         
-        for user in all_users:
-            # Jika admin memfilter cabang, kita abaikan Karyawan Alpha yang bukan dari cabang tersebut
-            if filter_branch and str(user.branch_id) != str(filter_branch):
-                continue
-                
-            key = (user.user_id, current_date)
-            
-            # A. Jika ada log absensi
-            if key in logs_dict:
-                for log in logs_dict[key]:
-                    # Filter by branch untuk log
-                    if filter_branch and str(log.checkin_branch_id) != str(filter_branch):
-                        continue
-                        
-                    check_in_wib = log.check_in_time if log.check_in_time else None
-                    check_out_wib = log.check_out_time  if log.check_out_time else None
-                    
-                    durasi = "-"
-                    if check_in_wib and check_out_wib:
-                        delta = check_out_wib - check_in_wib
-                        durasi = str(delta).split('.')[0]
-                        
-                    # LOGIKA LUPA PULANG
-                    sekarang_date = (datetime.utcnow() + timedelta(hours=7)).date()
-                    status_hadir = log.attendance_status
+    logs = query.all()
 
-                    # Jika tidak ada jam pulang DAN hari sudah berganti (kemarin)
-                    if not log.check_out_time and current_date < sekarang_date:
-                        status_hadir = "Lupa Pulang"
-                    report_data.append({
-                        "tanggal": current_date.strftime("%Y-%m-%d"),
-                        "nama_karyawan": user.nama_lengkap,
-                        "role": user.role,
-                        "cabang": log.checkin_branch.nama_cabang if log.checkin_branch else "-",
-                        "jam_masuk": check_in_wib.strftime("%H:%M") if check_in_wib else "-",
-                        "jam_pulang": check_out_wib.strftime("%H:%M") if check_out_wib else "-",
-                        "durasi_kerja": durasi,
-                        "status_kehadiran": status_hadir,
-                        "skor_wajah": f"{log.face_similarity_score:.2f}",
-                        "status_akhir": log.final_status,
-                        "sort_date": current_date # Hidden field untuk sorting
-                    })
+    # Strukturkan data untuk tabel frontend
+    laporan_harian = {}
+    for log in logs:
+        log_date = (log.timestamp + timedelta(hours=7)).strftime("%Y-%m-%d")
+        user_id = log.user_id
+        key = f"{user_id}_{log_date}"
+        
+        if key not in laporan_harian:
+            laporan_harian[key] = {
+                "tanggal": log_date,
+                "nama_karyawan": log.user.nama_lengkap,
+                "role": "Dinamis" if log.user.marketing_flexible else "Statis",
+                "cabang": log.branch.nama_cabang if log.branch else "Bypass Lapangan",
+                "jam_masuk": None, "lat_in": None, "lng_in": None,    # <-- Siapkan slot IN
+                "jam_pulang": None, "lat_out": None, "lng_out": None, # <-- Siapkan slot OUT
+                "status_kehadiran": log.status if log.status in ['Sakit', 'Izin', 'Cuti'] else "Hadir"
+            }
             
-            # B. Jika TIDAK ADA log absensi (Alpha / Libur)
-            else:
-                status_kehadiran = "Libur" if is_weekend else "Alpha"
-                
-                report_data.append({
-                    "tanggal": current_date.strftime("%Y-%m-%d"),
-                    "nama_karyawan": user.nama_lengkap,
-                    "role": user.role,
-                    "cabang": user.branch.nama_cabang if user.branch else "-",
-                    "jam_masuk": "-",
-                    "jam_pulang": "-",
-                    "durasi_kerja": "-",
-                    "status_kehadiran": status_kehadiran,
-                    "skor_wajah": "-",
-                    "status_akhir": "Alpha" if not is_weekend else "Libur", # Status spesial
-                    "sort_date": current_date
-                })
+        jam_str = (log.timestamp + timedelta(hours=7)).strftime("%H:%M")
+        lat_val = float(log.latitude_attempt) if log.latitude_attempt else None
+        lng_val = float(log.longitude_attempt) if log.longitude_attempt else None
 
-    # 6. Urutkan berdasarkan tanggal terbaru ke terlama
-    report_data.sort(key=lambda x: x["sort_date"], reverse=True)
+        # Pisahkan koordinat berdasarkan tipe absennya
+        if log.attempt_type == 'IN':
+            laporan_harian[key]["jam_masuk"] = jam_str
+            laporan_harian[key]["lat_in"] = lat_val
+            laporan_harian[key]["lng_in"] = lng_val
+        elif log.attempt_type == 'OUT':
+            laporan_harian[key]["jam_pulang"] = jam_str
+            laporan_harian[key]["lat_out"] = lat_val
+            laporan_harian[key]["lng_out"] = lng_val
+
+    # Ubah dictionary ke list untuk dikirim ke React
+    hasil_akhir = list(laporan_harian.values())
     
-    # Hapus field pembantu sebelum dikirim ke Frontend
-    for r in report_data:
-        del r["sort_date"]
+    # Urutkan berdasarkan tanggal terbalik (terbaru di atas)
+    hasil_akhir.sort(key=lambda x: x['tanggal'], reverse=True)
 
-    return jsonify(report_data), 200
+    return jsonify(hasil_akhir), 200
 
-# ==========================================
-# --- FITUR EXPORT EXCEL (FORMAT MATRIKS BULANAN) ---
-# ==========================================
 @admin_bp.route('/export/attendance', methods=['GET'])
 @jwt_required()
 @admin_required
 def export_attendance():
-    """
-    Endpoint untuk mendownload Laporan Absensi format Matriks (Pivot).
-    Satu baris per karyawan, kolom berisi tanggal 1-30/31, plus rekap total.
-    """
     db = next(get_db())
-    
-    # 1. Ambil Parameter Filter
     sekarang = datetime.utcnow() + timedelta(hours=7)
+    
     bulan_target = request.args.get('month', sekarang.month, type=int)
     tahun_target = request.args.get('year', sekarang.year, type=int)
+    branch_id = request.args.get('branch_id', type=int) # Tambahan: Tangkap filter cabang
 
-    # 2. Tentukan Rentang Hari dalam Bulan
     _, num_days = calendar.monthrange(tahun_target, bulan_target)
+    
+    # Filter user: Jika branch_id ada, hanya ambil karyawan di cabang tersebut
+    user_query = db.query(User).filter(User.role == 'karyawan')
+    if branch_id:
+        user_query = user_query.filter(User.branch_id == branch_id)
+    all_users = user_query.all()
+    
+    # Cari Log
+    log_query = db.query(AttendanceLog).filter(
+        extract('month', AttendanceLog.timestamp) == bulan_target,
+        extract('year', AttendanceLog.timestamp) == tahun_target,
+        AttendanceLog.status.in_(['Success', 'Sakit', 'Izin', 'Cuti'])
+    )
+    if branch_id:
+        log_query = log_query.filter(AttendanceLog.attempted_branch_id == branch_id)
+    logs = log_query.all()
 
-    # 3. Ambil Semua Karyawan & Log Absensinya
-    all_users = db.query(User).filter(User.role != 'admin').all()
-    if not all_users:
-        return jsonify({"msg": "Belum ada data karyawan di sistem."}), 404
-
-    logs = db.query(AttendanceLog).filter(
-        extract('month', AttendanceLog.timestamp_attempt) == bulan_target,
-        extract('year', AttendanceLog.timestamp_attempt) == tahun_target
-    ).all()
-
-    schedules = db.query(Schedule).filter(
-        extract('month', Schedule.tanggal) == bulan_target,
-        extract('year', Schedule.tanggal) == tahun_target,
-        Schedule.is_active == True
-    ).all()
-
-    # 4. Petakan Log ke dalam Dictionary: {(user_id, tanggal): log}
-    sched_dict = {}
-    for s in schedules:
-        k = (s.user_id, s.tanggal.day)
-        sched_dict[k] = sched_dict.get(k, 0) + 1
-
-    # Petakan Log Selesai (Check-in & Out) untuk hitung Realisasi
     logs_dict = {}
     for log in logs:
-        log_date = (log.timestamp_attempt + timedelta(hours=7)).date()
+        log_date = (log.timestamp + timedelta(hours=7)).date()
         key = (log.user_id, log_date.day)
-        if key not in logs_dict: logs_dict[key] = []
-        if log.final_status == 'Success': logs_dict[key].append(log)
+        if key not in logs_dict: logs_dict[key] = {'IN': None, 'OUT': None}
+        log_time = (log.timestamp + timedelta(hours=7)).strftime("%H:%M")
+        if log.attempt_type == 'IN' and not logs_dict[key]['IN']: logs_dict[key]['IN'] = log_time
+        if log.attempt_type == 'OUT': logs_dict[key]['OUT'] = log_time
 
     data_excel = []
     for user in all_users:
         row_data = {
-            "Nama Karyawan": user.nama_lengkap,
-            "Jabatan": user.role.capitalize(),
-            "Cabang Utama": user.branch.nama_cabang if user.branch else "-"
+            "Nama Karyawan": user.nama_lengkap, 
+            "Tipe": "Dinamis" if user.marketing_flexible else "Statis"
         }
-        
-        total_hadir = 0; total_telat = 0; total_alpha = 0; total_gagal = 0; total_parsial = 0
-        
+        t_hadir = 0; t_alpha = 0
         for day in range(1, num_days + 1):
-            current_date = date(tahun_target, bulan_target, day)
-            is_weekend = current_date.weekday() >= 5
+            curr = date(tahun_target, bulan_target, day)
             key = (user.user_id, day)
-            status_teks = ""
-            
-            # Tentukan Target Hari Ini (Dari Jadwal atau Default 1)
-            target_hari_ini = sched_dict.get(key, 1)
-
-            if key in logs_dict and len(logs_dict[key]) > 0:
-                list_logs = logs_dict[key]
-                # Hitung berapa absen yang sukses sampai pulang
-                realisasi = sum(1 for l in list_logs if l.check_out_time)
-                
-                # 1. PISAHKAN LOGIKA SESI GANTUNG
-                sesi_gantung = [l for l in list_logs if not l.check_out_time]
-                is_lupa_pulang_permanen = False
-                is_sesi_aktif = False
-                
-                if sesi_gantung:
-                    for gantung in sesi_gantung:
-                        # Gunakan aturan 18 Jam untuk HRD juga!
-                        durasi = (sekarang - gantung.check_in_time).total_seconds()
-                        if durasi > (18 * 3600):
-                            is_lupa_pulang_permanen = True
-                        else:
-                            is_sesi_aktif = True # Berarti dia sedang Shift Malam / Lintas Hari
-                
-                ada_telat = any(l.attendance_status == 'Terlambat' for l in list_logs)
-
-                # 2. EKSEKUSI STATUS EXCEL DENGAN PRIORITAS YANG BENAR
-                if is_sesi_aktif:
-                    # Karyawan masih punya waktu untuk check-out, jangan divonis dulu!
-                    status_teks = "Sesi Aktif" 
-                    total_hadir += 1
-                elif is_lupa_pulang_permanen:
-                    # Sudah lewat 18 Jam, resmi divonis Lupa Pulang
-                    status_teks = "Lupa Pulang"
-                    total_hadir += 1
-                elif current_date < sekarang.date() and realisasi < target_hari_ini:
-                    # Sudah beda hari, tidak ada sesi aktif, dan realisasi kurang dari target!
-                    status_teks = "Parsial"
-                    total_parsial += 1
-                    total_hadir += 1 
-                elif ada_telat:
-                    status_teks = "Telat"
-                    total_telat += 1
-                    total_hadir += 1
-                else:
-                    status_teks = "Hadir"
-                    total_hadir += 1
+            if key in logs_dict:
+                row_data[f"Tgl {day}"] = f"IN: {logs_dict[key]['IN'] or '-'} | OUT: {logs_dict[key]['OUT'] or '-'}"
+                t_hadir += 1
             else:
-                # Tidak ada log sukses sama sekali
-                if current_date > sekarang.date():
-                    status_teks = "-" 
-                elif is_weekend:
-                    status_teks = "Libur"
-                else:
-                    status_teks = "Alpha"
-                    total_alpha += 1
-                    
-            row_data[f"Tgl {day}"] = status_teks
-            
-        row_data["Total Hadir"] = total_hadir
-        row_data["Absen Parsial"] = total_parsial # Tambahan Kolom HRD!
-        row_data["Total Telat"] = total_telat
-        row_data["Total Alpha"] = total_alpha
+                row_data[f"Tgl {day}"] = "Libur" if curr.weekday() >= 6 else "Alpha"
+                if curr.weekday() < 6 and curr <= sekarang.date(): t_alpha += 1
         
+        row_data["Total Hadir"] = t_hadir
+        row_data["Total Alpha"] = t_alpha
         data_excel.append(row_data)
 
-    # 6. Convert ke Excel
     df = pd.DataFrame(data_excel)
-    # Urutkan berdasarkan Nama Karyawan A-Z
-    df.sort_values(by=['Nama Karyawan'], ascending=[True], inplace=True)
-
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Rekap Matriks')
-        worksheet = writer.sheets['Rekap Matriks']
-        
-        # Fitur UX Keren: Kunci kolom (Freeze Panes) agar nama tidak hilang saat di-scroll ke kanan
-        worksheet.freeze_panes = 'D2' 
-        
-        # Sesuaikan lebar kolom otomatis
-        for idx, col in enumerate(df.columns):
-            column_letter = get_column_letter(idx + 1)
-            if col.startswith("Tgl"):
-                worksheet.column_dimensions[column_letter].width = 6 # Kolom tanggal dirampingkan
-            else:
-                max_len = max(df[col].astype(str).map(len).max(), len(col)) + 2
-                worksheet.column_dimensions[column_letter].width = max_len
-
+        df.to_excel(writer, index=False, sheet_name='Rekap')
     output.seek(0)
-    nama_file = f"Rekap_Matriks_HRD_{tahun_target}_{bulan_target:02d}.xlsx"
     
+    nama_file = f"Rekap_{tahun_target}_{bulan_target}.xlsx"
+    if branch_id:
+        nama_file = f"Rekap_Cabang_{branch_id}_{tahun_target}_{bulan_target}.xlsx"
+        
     return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
+        output, 
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+        as_attachment=True, 
         download_name=nama_file
     )
 
+@admin_bp.route('/manual-attendance', methods=['POST'])
+@jwt_required()
+@admin_required
+def manual_attendance():
+    db = next(get_db())
+    data = request.json
+    
+    user_id = data.get('user_id')
+    tanggal_str = data.get('tanggal') # Format: YYYY-MM-DD
+    status = data.get('status')
+    keterangan = data.get('keterangan', '')
+
+    if not all([user_id, tanggal_str, status]):
+        return jsonify({"error": "Data tidak lengkap"}), 400
+
+    # Ubah string tanggal menjadi objek datetime (Set jam 08:00 pagi WIB / 01:00 UTC)
+    # Agar masuk akal secara urutan waktu
+    try:
+        tanggal_obj = datetime.strptime(f"{tanggal_str} 01:00:00", "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return jsonify({"error": "Format tanggal salah"}), 400
+
+    # Cek apakah sudah ada log manual di hari yang sama agar tidak dobel
+    existing_log = db.query(AttendanceLog).filter(
+        AttendanceLog.user_id == user_id,
+        extract('year', AttendanceLog.timestamp) == tanggal_obj.year,
+        extract('month', AttendanceLog.timestamp) == tanggal_obj.month,
+        extract('day', AttendanceLog.timestamp) == tanggal_obj.day,
+        AttendanceLog.status.in_(['Sakit', 'Izin', 'Cuti'])
+    ).first()
+
+    if existing_log:
+        return jsonify({"error": f"Karyawan sudah tercatat {existing_log.status} pada tanggal tersebut."}), 400
+
+    # Buat Log Ground Truth dengan Gatekeeper AI yang di-Bypass (Dibuat NULL)
+    new_log = AttendanceLog(
+        user_id=user_id,
+        attempt_type='MANUAL', # Menandakan ini bukan dari mesin absensi
+        timestamp=tanggal_obj,
+        latitude_attempt=None,
+        longitude_attempt=None,
+        distance_meters=None,
+        is_live=None,
+        similarity_score=None,
+        status=status,
+        keterangan_hrd=keterangan
+    )
+
+    db.add(new_log)
+    db.commit()
+
+    return jsonify({"msg": "Data manual berhasil disimpan"}), 200
 # ==========================================
-# --- FITUR TAHAP 3: LOG ANOMALI / AUDIT ---
+# 5. LOG ANOMALI
 # ==========================================
 @admin_bp.route("/anomalies", methods=["GET"])
 @jwt_required()
-@admin_required
+@admin_required 
 def get_anomalies():
-    db: Session = next(get_db())
+    db = next(get_db())
+    threshold = float(os.getenv("ARCFACE_THRESHOLD", 0.50))
+    logs = db.query(AttendanceLog).filter_by(status='Failed').order_by(desc(AttendanceLog.timestamp)).limit(50).all()
     
-    # 1. Ambil Parameter Filter (Default: Bulan Ini)
-    sekarang = datetime.utcnow() + timedelta(hours=7)
-    bulan_target = request.args.get('month', sekarang.month, type=int)
-    tahun_target = request.args.get('year', sekarang.year, type=int)
-    
-    # 2. Tarik data pelanggaran berdasarkan Bulan & Tahun
-    logs = db.query(AttendanceLog).join(User).filter(
-        AttendanceLog.final_status != 'Success',
-        extract('month', AttendanceLog.timestamp_attempt) == bulan_target,
-        extract('year', AttendanceLog.timestamp_attempt) == tahun_target
-    ).order_by(desc(AttendanceLog.timestamp_attempt)).all()
-    
-    result = []
-    for log in logs:
-        # Konversi ke WIB
-        waktu_wib = log.timestamp_attempt + timedelta(hours=7)
+    res = []
+    for l in logs:
+        reason = "Anomali Sistem Tidak Diketahui"
         
-        result.append({
-            "log_id": log.log_id,
-            "waktu": waktu_wib.strftime("%Y-%m-%d %H:%M:%S"),
-            "nama_karyawan": log.user.nama_lengkap,
-            "role": log.user.role,
-            "koordinat": f"{log.latitude_attempt}, {log.longitude_attempt}" if log.latitude_attempt else "Tidak ada akses GPS",
-            "alasan": log.keterangan if log.keterangan else "Gagal Sistem",
-            "status_akhir": log.final_status
+        # URUTAN SESUAI ACTIVITY DIAGRAM (GEOFENCING -> LIVENESS -> ARCFACE)
+        
+        # 1. Cek Geofencing
+        if l.distance_meters is not None and l.branch and l.distance_meters > l.branch.radius_meter:
+            reason = f"Luar Area ({round(l.distance_meters)}m)"
+            
+        # 2. Cek Liveness (Anti-Spoofing)
+        elif l.is_live is False: 
+            reason = "Spoofing (Foto Palsu / Topeng)"
+            
+        # 3. Cek ArcFace (Kecocokan Wajah)
+        elif l.similarity_score is not None and l.similarity_score < threshold:
+            reason = f"Wajah Tidak Cocok ({round(l.similarity_score*100)}%)"
+            
+        res.append({
+            "log_id": l.log_id, 
+            "waktu": (l.timestamp + timedelta(hours=7)).strftime("%Y-%m-%d %H:%M"),
+            "nama_karyawan": l.user.nama_lengkap, 
+            "alasan": reason,
+            "koordinat": f"{l.latitude_attempt}, {l.longitude_attempt}" if l.latitude_attempt is not None else "No GPS"
         })
         
-    return jsonify(result), 200
+    return jsonify(res), 200

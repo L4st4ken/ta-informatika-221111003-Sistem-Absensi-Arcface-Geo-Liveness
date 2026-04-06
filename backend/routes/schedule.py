@@ -14,7 +14,8 @@ def admin_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         claims = get_jwt()
-        if claims.get("role") != "admin":
+        # UPDATE 1: Role menjadi admin_hrd
+        if claims.get("role") != "admin_hrd":
             return jsonify({"error": "Admin access required"}), 403
         return fn(*args, **kwargs)
     return wrapper
@@ -25,15 +26,11 @@ def admin_required(fn):
 @jwt_required()
 @admin_required
 def list_all_schedules():
-    """
-    Admin melihat semua jadwal (bisa difilter tanggal)
-    """
     db: Session = next(get_db())
-    
-    # Filter opsional dari URL ?date=2025-12-09
     filter_date = request.args.get('date')
     
-    query = db.query(Schedule).join(User).join(Branch).order_by(desc(Schedule.tanggal))
+    # UPDATE 2: Gunakan outerjoin(Branch) agar jadwal "Dinas Luar" yang tidak punya cabang tetap muncul!
+    query = db.query(Schedule).join(User).outerjoin(Branch).order_by(desc(Schedule.tanggal))
     
     if filter_date:
         query = query.filter(Schedule.tanggal == filter_date)
@@ -43,9 +40,11 @@ def list_all_schedules():
     result = [{
         "schedule_id": s.schedule_id,
         "user_id": s.user_id,
-        "nama_karyawan": s.user.nama_lengkap, # Tampilkan Nama
+        "nama_karyawan": s.user.nama_lengkap, 
         "branch_id": s.branch_id,
-        "nama_cabang": s.branch.nama_cabang,  # Tampilkan Lokasi
+        # UPDATE 3: Penanganan aman jika branch_id NULL
+        "nama_cabang": s.branch.nama_cabang if s.branch else "Dinas Luar / Bebas Lokasi", 
+        "tipe_jadwal": s.tipe_jadwal, # <-- Menampilkan tipe jadwal ke HRD
         "tanggal": s.tanggal.isoformat(),
         "jam_mulai": s.jam_mulai.strftime("%H:%M"),
         "jam_selesai": s.jam_selesai.strftime("%H:%M"),
@@ -61,14 +60,22 @@ def create_schedule():
     db: Session = next(get_db())
     data = request.json
 
-    required_fields = ["user_id", "branch_id", "tanggal", "jam_mulai", "jam_selesai"]
+    required_fields = ["user_id", "tanggal", "jam_mulai", "jam_selesai"]
     if not all(f in data for f in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
+
+    # UPDATE 4: Logika Cerdas Pendaftaran Cabang vs Dinas Luar
+    tipe_jadwal = data.get("tipe_jadwal", "Reguler")
+    branch_id = data.get("branch_id")
+
+    if tipe_jadwal != "Dinas Luar" and not branch_id:
+        return jsonify({"error": "Cabang wajib diisi untuk jadwal Reguler / BKO"}), 400
 
     try:
         schedule = Schedule(
             user_id=data["user_id"],
-            branch_id=data["branch_id"],
+            branch_id=branch_id if tipe_jadwal != "Dinas Luar" else None,
+            tipe_jadwal=tipe_jadwal, # <-- Simpan tipe jadwal
             tanggal=datetime.strptime(data["tanggal"], "%Y-%m-%d").date(),
             jam_mulai=datetime.strptime(data["jam_mulai"], "%H:%M").time(),
             jam_selesai=datetime.strptime(data["jam_selesai"], "%H:%M").time(),
@@ -91,7 +98,15 @@ def update_schedule(schedule_id):
 
     data = request.json
     try:
-        if "branch_id" in data: schedule.branch_id = data["branch_id"]
+        if "tipe_jadwal" in data: 
+            schedule.tipe_jadwal = data["tipe_jadwal"]
+            
+        # Jika diubah jadi Dinas Luar, pastikan cabangnya otomatis jadi Null
+        if schedule.tipe_jadwal == "Dinas Luar":
+            schedule.branch_id = None
+        elif "branch_id" in data: 
+            schedule.branch_id = data["branch_id"]
+
         if "tanggal" in data: 
             schedule.tanggal = datetime.strptime(data["tanggal"], "%Y-%m-%d").date()
         if "jam_mulai" in data: 
@@ -135,11 +150,10 @@ def get_my_schedule():
     db: Session = next(get_db())
     user_id = get_jwt_identity()
     
-    # Ambil jadwal hari ini ke depan (Upcoming)
     today = date.today()
     
-    # Join dengan Branch supaya user tau nama tempatnya
-    schedules = db.query(Schedule).join(Branch).filter(
+    # UPDATE 5: outerjoin Branch agar Dinas Luar bisa muncul di HP karyawan
+    schedules = db.query(Schedule).outerjoin(Branch).filter(
         Schedule.user_id == user_id,
         Schedule.is_active == True,
         Schedule.tanggal >= today
@@ -148,10 +162,11 @@ def get_my_schedule():
     result = [{
         "schedule_id": s.schedule_id,
         "tanggal": s.tanggal.isoformat(),
+        "tipe_jadwal": s.tipe_jadwal,
         "jam_mulai": s.jam_mulai.strftime("%H:%M"),
         "jam_selesai": s.jam_selesai.strftime("%H:%M"),
-        "nama_cabang": s.branch.nama_cabang, # <--- PENTING BUAT USER
-        "alamat": f"Lat: {s.branch.latitude}, Lon: {s.branch.longitude}",
+        "nama_cabang": s.branch.nama_cabang if s.branch else "Dinas Luar (Bebas Lokasi)", 
+        "alamat": f"Lat: {s.branch.latitude}, Lon: {s.branch.longitude}" if s.branch else "Menggunakan GPS Aktual",
         "status": "Aktif" if s.is_active else "Batal"
     } for s in schedules]
 

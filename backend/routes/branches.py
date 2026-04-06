@@ -1,24 +1,20 @@
-# routes/branches.py
 from flask import Blueprint, request, jsonify
 from sqlalchemy.orm import Session
 from database.connection import get_db
 from models.models import Branch, User
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from utils.roles import role_required
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from functools import wraps
 
 branches_bp = Blueprint("branches_bp", __name__, url_prefix="/branches")
 
-# Middleware helper: pastikan user adalah admin
+# Middleware Helper: Pastikan role adalah 'admin'
 def admin_required(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
-        current_email = get_jwt_identity()
-        db: Session = next(get_db())
-        user_id = get_jwt_identity()
-        user = db.query(User).filter(user_id=user_id).first()
-        if not user or user.role != "admin":
-            return jsonify({"error": "Admin access required"}), 403
+        claims = get_jwt()
+        if claims.get("role") != "admin":
+            return jsonify({"error": "Akses ditolak! Hanya Admin HRD yang diizinkan."}), 403
         return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__
     return wrapper
 
 @branches_bp.route("/", methods=["GET"])
@@ -28,70 +24,56 @@ def get_branches():
     branches = db.query(Branch).all()
     result = [{
         "branch_id": b.branch_id,
-        "branch_name": b.branch_name,
-        "latitude": b.latitude,
-        "longitude": b.longitude,
-        "radius_meter": getattr(b, "radius_meter", None)
+        "nama_cabang": b.nama_cabang,
+        "latitude": float(b.latitude),
+        "longitude": float(b.longitude),
+        "radius_meter": getattr(b, "radius_meter", 50)
     } for b in branches]
     return jsonify(result), 200
 
 @branches_bp.route("/create", methods=["POST"])
 @jwt_required()
-@role_required("admin")
+@admin_required
 def create_branch():
     db: Session = next(get_db())
     data = request.json
-    branch_name = data.get("branch_name")
+    
+    nama_cabang = data.get("nama_cabang") 
     latitude = data.get("latitude")
     longitude = data.get("longitude")
     radius_meter = data.get("radius_meter", 50)
 
-    if not all([branch_name, latitude, longitude]):
-        return jsonify({"error": "Missing required fields"}), 400
+    if not all([nama_cabang, latitude, longitude]):
+        return jsonify({"error": "Data tidak lengkap"}), 400
 
     branch = Branch(
-        branch_name=branch_name,
+        nama_cabang=nama_cabang,
         latitude=float(latitude),
         longitude=float(longitude),
         radius_meter=int(radius_meter)
     )
     db.add(branch)
     db.commit()
-    db.refresh(branch)
 
-    return jsonify({
-        "branch_id": branch.branch_id,
-        "branch_name": branch.branch_name,
-        "latitude": branch.latitude,
-        "longitude": branch.longitude,
-        "radius_meter": branch.radius_meter
-    }), 201
+    return jsonify({"msg": "Cabang dibuat!", "branch_id": branch.branch_id}), 201
 
 @branches_bp.route("/<int:branch_id>/update", methods=["PUT"])
 @jwt_required()
-@role_required("admin")
+@admin_required
 def update_branch(branch_id):
     db: Session = next(get_db())
     branch = db.query(Branch).filter(Branch.branch_id == branch_id).first()
     if not branch:
-        return jsonify({"error": "Branch not found"}), 404
+        return jsonify({"error": "Cabang tidak ditemukan"}), 404
 
     data = request.json
-    branch.branch_name = data.get("branch_name", branch.branch_name)
-    branch.latitude = float(data.get("latitude", branch.latitude))
-    branch.longitude = float(data.get("longitude", branch.longitude))
-    branch.radius_meter = int(data.get("radius_meter", getattr(branch, "radius_meter", 50)))
+    if "nama_cabang" in data: branch.nama_cabang = data["nama_cabang"]
+    if "latitude" in data: branch.latitude = float(data["latitude"])
+    if "longitude" in data: branch.longitude = float(data["longitude"])
+    if "radius_meter" in data: branch.radius_meter = int(data["radius_meter"])
 
     db.commit()
-    db.refresh(branch)
-
-    return jsonify({
-        "branch_id": branch.branch_id,
-        "branch_name": branch.branch_name,
-        "latitude": branch.latitude,
-        "longitude": branch.longitude,
-        "radius_meter": branch.radius_meter
-    }), 200
+    return jsonify({"msg": "Cabang diupdate"}), 200
 
 @branches_bp.route("/<int:branch_id>/delete", methods=["DELETE"])
 @jwt_required()
@@ -99,9 +81,8 @@ def update_branch(branch_id):
 def delete_branch(branch_id):
     db: Session = next(get_db())
     branch = db.query(Branch).filter(Branch.branch_id == branch_id).first()
-    if not branch:
-        return jsonify({"error": "Branch not found"}), 404
+    if not branch: return jsonify({"error": "Cabang tidak ditemukan"}), 404
 
     db.delete(branch)
     db.commit()
-    return jsonify({"message": "Branch deleted"}), 200
+    return jsonify({"message": "Cabang berhasil dihapus"}), 200

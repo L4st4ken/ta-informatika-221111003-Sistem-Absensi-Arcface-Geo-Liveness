@@ -1,170 +1,86 @@
-from sqlalchemy import Column, Integer, String, Float, Text, Date, Time, DateTime, Boolean, ForeignKey, Enum, Numeric
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Enum, DateTime, LargeBinary, DECIMAL, Text
 from sqlalchemy.orm import relationship
-from database.connection import Base
 from datetime import datetime
+from database.connection import Base
 
 # -----------------------------
-# 1. Master Shift (BARU)
-# -----------------------------
-# Menyimpan template jam kerja (cth: "Reguler 08:00-16:00")
-class Shift(Base):
-    __tablename__ = "shifts"
-
-    shift_id = Column(Integer, primary_key=True, autoincrement=True)
-    nama_shift = Column(String(50), nullable=False)  # e.g. "Pagi", "Siang"
-    jam_masuk = Column(Time, nullable=False)         # 08:00:00
-    jam_pulang = Column(Time, nullable=False)        # 16:00:00
-
-    # Relationships
-    users = relationship("User", back_populates="shift")
-
-
-# -----------------------------
-# 2. Branch
+# 1. Branch (Validasi Geospasial)
 # -----------------------------
 class Branch(Base):
     __tablename__ = "branches"
 
     branch_id = Column(Integer, primary_key=True, autoincrement=True)
     nama_cabang = Column(String(100), nullable=False)
-    latitude = Column(Numeric(11, 6), nullable=True)
-    longitude = Column(Numeric(11, 6), nullable=True)
+    latitude = Column(DECIMAL(10, 8), nullable=False)
+    longitude = Column(DECIMAL(11, 8), nullable=False)
     radius_meter = Column(Integer, default=50)
 
     # Relationships
     users = relationship("User", back_populates="branch")
-    schedules = relationship("Schedule", back_populates="branch")
-    
-    # Relasi ke Logs (Ada 2 karena CheckIn dan CheckOut)
-    logs_checkin = relationship("AttendanceLog", foreign_keys="[AttendanceLog.checkin_branch_id]", back_populates="checkin_branch")
-    logs_checkout = relationship("AttendanceLog", foreign_keys="[AttendanceLog.checkout_branch_id]", back_populates="checkout_branch")
-
+    attendance_logs = relationship("AttendanceLog", back_populates="branch")
 
 # -----------------------------
-# 3. User
+# 2. User (Identitas & Akses - Hanya 2 Aktor)
 # -----------------------------
 class User(Base):
     __tablename__ = "users"
 
     user_id = Column(Integer, primary_key=True, autoincrement=True)
+    nik = Column(String(20), unique=True, nullable=False)
     nama_lengkap = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    role = Column(Enum('karyawan', 'supervisor', 'admin'), nullable=False, default='karyawan')
     
-    # Lokasi Tetap (Homebase)
-    branch_id = Column(Integer, ForeignKey("branches.branch_id"), nullable=True)
+    # GROUND TRUTH: Hanya ada 2 Aktor
+    role = Column(Enum('karyawan', 'admin'), nullable=False, default='karyawan')
     
-    # Shift Tetap (Default Shift) - BARU
-    shift_id = Column(Integer, ForeignKey("shifts.shift_id"), nullable=True)
+    branch_id = Column(Integer, ForeignKey("branches.branch_id", ondelete="SET NULL"), nullable=True)
+    
+    # KUNCI FLEKSIBILITAS: Pengganti sistem BKO/Dinas Luar yang rumit
+    marketing_flexible = Column(Boolean, default=False)
 
     # Relationships
     branch = relationship("Branch", back_populates="users")
-    shift = relationship("Shift", back_populates="users") # Relasi ke Shift
-    
-    embeddings = relationship("FaceEmbedding", back_populates="user", uselist=False)
-    schedules = relationship("Schedule", back_populates="user")
-    attendance_logs = relationship("AttendanceLog", back_populates="user")
-    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
-
+    embeddings = relationship("FaceEmbedding", back_populates="user", cascade="all, delete-orphan", uselist=False)
+    attendance_logs = relationship("AttendanceLog", back_populates="user", cascade="all, delete-orphan")
 
 # -----------------------------
-# 4. Face Embedding
+# 3. Face Embedding (Vektor Biometrik AI)
 # -----------------------------
 class FaceEmbedding(Base):
     __tablename__ = "face_embeddings"
 
     embedding_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), unique=True, nullable=False)
-    embedding_data = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), unique=True, nullable=False)
+    # Tipe LargeBinary (BLOB) sangat krusial dihindari pemanggilannya saat Fail-Fast
+    embedding_data = Column(LargeBinary, nullable=False)
 
     user = relationship("User", back_populates="embeddings")
 
-
 # -----------------------------
-# 5. Schedule (Override/Dinas)
-# -----------------------------
-# Hanya dipakai jika Supervisor punya jadwal khusus di luar shift default
-class Schedule(Base):
-    __tablename__ = "schedules"
-
-    schedule_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
-    branch_id = Column(Integer, ForeignKey("branches.branch_id"), nullable=False) # Lokasi Dinas
-    tanggal = Column(Date, nullable=False)
-    jam_mulai = Column(Time, nullable=False)
-    jam_selesai = Column(Time, nullable=False)
-    is_active = Column(Boolean, default=True)
-
-    user = relationship("User", back_populates="schedules")
-    branch = relationship("Branch", back_populates="schedules")
-
-
-# -----------------------------
-# 6. Attendance Log (Final)
+# 4. Attendance Log (Event-Based & Audit AI)
 # -----------------------------
 class AttendanceLog(Base):
     __tablename__ = "attendance_logs"
 
     log_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
-
-    # Lokasi Masuk (Wajib Ada) -> Saya rename jadi checkin_branch_id biar jelas
-    checkin_branch_id = Column(Integer, ForeignKey("branches.branch_id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    attempted_branch_id = Column(Integer, ForeignKey("branches.branch_id", ondelete="SET NULL"), nullable=True)
     
-    # Lokasi Pulang (Bisa Null, Bisa Beda Cabang untuk Supervisor) - BARU
-    checkout_branch_id = Column(Integer, ForeignKey("branches.branch_id"), nullable=True)
-
-    check_in_time = Column(DateTime, nullable=True)
-    check_out_time = Column(DateTime, nullable=True)
-
-    # Status Keterlambatan (Dicatat permanen saat absen) - BARU
-    attendance_status = Column(Enum('Tepat Waktu', 'Terlambat', 'Pulang Cepat', 'Alpha'), default='Tepat Waktu')
-
-    # Data Teknis (Snapshot saat Check-In)
-    timestamp_attempt = Column(DateTime, default=datetime.utcnow)
-    latitude_attempt = Column(Numeric(11, 6), nullable=True)
-    longitude_attempt = Column(Numeric(11, 6), nullable=True)
-    is_inside_geofence = Column(Boolean, default=False)
-    is_liveness_passed = Column(Boolean, default=False)
-    face_similarity_score = Column(Float, default=0.0)
+    # Event-Based: Setiap jepret kamera = 1 baris di tabel ini
+    attempt_type = Column(Enum('IN', 'OUT'), nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    latitude_attempt = Column(DECIMAL(10, 8), nullable=False)
+    longitude_attempt = Column(DECIMAL(11, 8), nullable=False)
     
-    # Status Validasi Sistem
-    final_status = Column(
-        Enum(
-            'Success',
-            'Failure_GPS',
-            'Failure_Liveness',
-            'Failure_Face',
-            'Failure_Schedule',
-            'Failure_Unauthorized'
-        ),
-        default='Failure_Unauthorized'
-    )
-
-    keterangan = Column(String(255), nullable=True)
+    # Hasil Kalkulasi Jarak & AI (Bisa Null jika karyawan langsung ditolak di tahap awal)
+    distance_meters = Column(Float, nullable=True)
+    is_live = Column(Boolean, nullable=True)
+    similarity_score = Column(Float, nullable=True)
+    status = Column(Enum('Success', 'Failed', 'Sakit', 'Izin', 'Cuti', name='status_enum'), nullable=False)
+    keterangan_hrd = Column(String(255), nullable=True)
+    laporan_kegiatan = Column(Text, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="attendance_logs")
-    
-    # Explicit Foreign Keys untuk SQLAlchemy
-    checkin_branch = relationship("Branch", foreign_keys=[checkin_branch_id], back_populates="logs_checkin")
-    checkout_branch = relationship("Branch", foreign_keys=[checkout_branch_id], back_populates="logs_checkout")
-
-
-# -----------------------------
-# 7. Refresh Token
-# -----------------------------
-class RefreshToken(Base):
-    __tablename__ = "refresh_tokens"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    jti = Column(String(255), unique=True, nullable=False)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    expires_at = Column(DateTime, nullable=False)
-    revoked = Column(Boolean, default=False)
-    device_info = Column(String(255), nullable=True)
-
-    user = relationship("User", back_populates="refresh_tokens")
+    branch = relationship("Branch", back_populates="attendance_logs")

@@ -16,6 +16,7 @@ engine = create_engine(
 # Session factory
 # -----------------------------
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+print(Config.SQLALCHEMY_DATABASE_URI)
 
 # -----------------------------
 # Base model
