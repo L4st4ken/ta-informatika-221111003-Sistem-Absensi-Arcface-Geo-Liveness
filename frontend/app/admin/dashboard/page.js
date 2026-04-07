@@ -171,7 +171,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-visible">
             <table className="w-full text-sm text-left">
               <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] tracking-wider">
                 <tr>
@@ -187,12 +187,38 @@ export default function AdminDashboard() {
                   feed.map((row, i) => (
                     <tr key={i} className="hover:bg-blue-50/50 transition">
                       <td className="p-4 text-gray-600 font-mono font-bold">{row.jam}</td>
+                      
+                      {/* === UPDATE IDENTITAS: Tambah Pop-up Laporan === */}
                       <td className="p-4">
                         <p className="font-bold text-gray-800">{row.nama}</p>
-                        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mt-0.5">
-                          Mode {row.role}
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 relative">
+                          <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">
+                            Mode {row.role}
+                          </p>
+                          
+                          {/* Logika memunculkan ikon dokumen jika ada laporan */}
+                          {row.laporan && (
+                            <div className="group flex items-center">
+                              <span className="cursor-help text-orange-500 hover:text-orange-600 transition-colors">
+                                <FileText size={14} />
+                              </span>
+                              
+                              {/* Kotak Pop-up Tooltip */}
+                              <div className="absolute left-0 top-full mt-2 hidden group-hover:block w-64 p-3 bg-gray-800 text-white text-xs rounded-xl shadow-xl z-50 whitespace-normal">
+                                <div className="absolute -top-1.5 left-4 w-3 h-3 bg-gray-800 rotate-45"></div>
+                                <p className="font-bold text-orange-400 mb-1 uppercase text-[9px] tracking-widest">
+                                  Laporan Kegiatan
+                                </p>
+                                <p className="leading-relaxed opacity-90 italic">
+                                  &quot;{row.laporan}&quot;
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </td>
+                      {/* =============================================== */}
+
                       <td className="p-4 text-center">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                           row.tipe === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
@@ -202,11 +228,11 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       
-                      {/* === UPDATE DI KOLOM LOKASI SINI === */}
+                      {/* === UPDATE DI KOLOM LOKASI (URL GOOGLE MAPS) === */}
                       <td className="p-4">
                         {row.lat && row.lng ? (
                           <a 
-                            href={`https://maps.google.com/?q=${row.lat},${row.lng}`}
+                            href={`https://www.google.com/maps?q=${row.lat},${row.lng}`}
                             target="_blank" 
                             rel="noopener noreferrer"
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-bold transition-all hover:shadow-md active:scale-95 ${
@@ -214,7 +240,7 @@ export default function AdminDashboard() {
                                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100' 
                                 : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                             }`}
-                            title="Lihat di Google Maps"
+                            title="Lihat Titik Koordinat di Google Maps"
                           >
                             <MapPin size={12} className={row.lokasi.includes('Bypass') ? "text-indigo-500" : "text-gray-400"} />
                             {row.lokasi}
@@ -229,7 +255,7 @@ export default function AdminDashboard() {
                           </span>
                         )}
                       </td>
-                      {/* =================================== */}
+                      {/* =============================================== */}
 
                       <td className="p-4 text-center">
                          <span className={`px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider border ${
@@ -257,7 +283,7 @@ export default function AdminDashboard() {
   );
 }
 
-// --- KOMPONEN KECIL --- (Tidak ada perubahan)
+// --- KOMPONEN KECIL ---
 function MenuButton({ title, icon, color, onClick }) {
   const colorStyles = {
     blue: "text-blue-600 group-hover:bg-blue-600 group-hover:text-white bg-blue-50",
