@@ -221,10 +221,12 @@ export default function AdminDashboard() {
 
                       <td className="p-4 text-center">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                          row.tipe === 'IN' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                          row.tipe === 'IN' ? 'bg-blue-100 text-blue-700' : 
+                          row.tipe === 'OUT' ? 'bg-orange-100 text-orange-700' : 
+                          'bg-gray-100 text-gray-700'
                         }`}>
-                          <ArrowRightLeft size={10} />
-                          {row.tipe === 'IN' ? 'MASUK' : 'PULANG'}
+                          {row.tipe !== 'MANUAL' && <ArrowRightLeft size={10} />}
+                          {row.tipe === 'IN' ? 'MASUK' : row.tipe === 'OUT' ? 'PULANG' : 'MANUAL'}
                         </span>
                       </td>
                       
@@ -259,9 +261,13 @@ export default function AdminDashboard() {
 
                       <td className="p-4 text-center">
                          <span className={`px-2.5 py-1 rounded text-[10px] font-black uppercase tracking-wider border ${
-                          row.status_akhir === 'Success' ? 'text-green-600 bg-green-50 border-green-200' : 'text-red-600 bg-red-50 border-red-200'
+                          row.status_akhir === 'Success' ? 'text-green-600 bg-green-50 border-green-200' : 
+                          row.status_akhir === 'Failed' ? 'text-red-600 bg-red-50 border-red-200' :
+                          'text-purple-600 bg-purple-50 border-purple-200' // Warna ungu untuk Sakit/Izin/Cuti
                         }`}>
-                          {row.status_akhir === 'Success' ? 'BERHASIL' : 'DITOLAK'}
+                          {row.status_akhir === 'Success' ? 'BERHASIL' : 
+                           row.status_akhir === 'Failed' ? 'DITOLAK' : 
+                           row.status_akhir.toUpperCase()}
                         </span>
                       </td>
                     </tr>

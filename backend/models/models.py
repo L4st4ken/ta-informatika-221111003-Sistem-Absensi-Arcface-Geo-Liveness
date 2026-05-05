@@ -68,10 +68,10 @@ class AttendanceLog(Base):
     attempted_branch_id = Column(Integer, ForeignKey("branches.branch_id", ondelete="SET NULL"), nullable=True)
     
     # Event-Based: Setiap jepret kamera = 1 baris di tabel ini
-    attempt_type = Column(Enum('IN', 'OUT'), nullable=False)
+    attempt_type = Column(Enum('IN', 'OUT', 'MANUAL'), nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
-    latitude_attempt = Column(DECIMAL(10, 8), nullable=False)
-    longitude_attempt = Column(DECIMAL(11, 8), nullable=False)
+    latitude_attempt = Column(DECIMAL(10, 8), nullable=True)
+    longitude_attempt = Column(DECIMAL(11, 8), nullable=True)
     
     # Hasil Kalkulasi Jarak & AI (Bisa Null jika karyawan langsung ditolak di tahap awal)
     distance_meters = Column(Float, nullable=True)

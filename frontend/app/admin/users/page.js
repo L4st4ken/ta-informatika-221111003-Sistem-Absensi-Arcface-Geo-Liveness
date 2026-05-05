@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { Trash2, Plus, Search, ArrowLeft, Save, X, Camera, RefreshCcw, User } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, ArrowLeft, Save, X, Camera, RefreshCcw, User } from 'lucide-react';
 
 export default function UserManagement() {
   const router = useRouter();
@@ -17,30 +17,34 @@ export default function UserManagement() {
   
   // State Form & Modal
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     nik: '',
     nama_lengkap: '',
     email: '',
     password: '',
-    role: 'karyawan', // Hanya admin atau karyawan
+    role: 'karyawan',
     marketing_flexible: false,
     branch_id: '',
-    image_base64: '' // Menampung foto biometrik
+    image_base64: ''
   });
 
   // State Kamera HRD
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+
+  const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev';
 
   // --- 1. FETCH DATA (Users & Branches) ---
   const fetchMasterData = useCallback(async () => {
     try {
       const token = localStorage.getItem('access_token');
-      if (!token) return router.push('/login');
+      if (!token) return router.push('/');
 
       const headers = { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' };
-      const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; // Sesuaikan jika pakai Ngrok
+      
 
       const [resUsers, resBranches] = await Promise.all([
         axios.get(`${API_URL}/admin/users`, { headers }),
@@ -51,7 +55,7 @@ export default function UserManagement() {
       setBranches(resBranches.data);
     } catch (err) {
       console.error(err);
-      if (err.response?.status === 401 || err.response?.status === 403) router.push('/login');
+      if (err.response?.status === 401 || err.response?.status === 403) router.push('/');
     } finally {
       // Menaruh setLoading di finally memastikan ia dipanggil secara Async
       setLoading(false); 
@@ -120,10 +124,27 @@ export default function UserManagement() {
     if (!showModal) stopCamera();
   }, [showModal]);
 
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // Batasi maksimal 5MB
+        alert("Ukuran foto terlalu besar! Maksimal 5MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, image_base64: reader.result }));
+        stopCamera(); // Matikan kamera laptop jika sedang menyala
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // --- 3. HANDLER CRUD ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.image_base64) {
+    if (!editingId && !formData.image_base64) {
       alert("Pendaftaran gagal! Anda WAJIB mengambil foto wajah karyawan untuk data Biometrik.");
       return;
     }
@@ -136,11 +157,22 @@ export default function UserManagement() {
       if (payload.marketing_flexible) payload.branch_id = null;
       else if (!payload.branch_id) payload.branch_id = branches.length > 0 ? branches[0].branch_id : null;
 
-      await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users', payload, {
+      const headers = { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' };
+
+      if (editingId){
+        if (!payload.password) delete payload.password;
+        if (!payload.image_base64) delete payload.image_base64;
+
+        await axios.put(`${API_URL}/admin/users/${editingId}`, payload, {headers});
+        alert("Data Karyawan berhasil diperbarui!");
+
+      }else{
+        await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users', payload, {
         headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
-      });
+        });
+        alert("Akun Karyawan dan Data Wajah berhasil didaftarkan!");
+      }
       
-      alert("Akun Karyawan dan Data Wajah berhasil didaftarkan!");
       stopCamera();
       setShowModal(false);
       fetchMasterData(); 
@@ -154,8 +186,8 @@ export default function UserManagement() {
     if(!confirm("Yakin ingin menghapus karyawan ini dan data wajahnya secara permanen?")) return;
     try {
       const token = localStorage.getItem('access_token');
-      await axios.delete(`https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.delete(`${API_URL}/admin/users/${id}`, {
+        headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       fetchMasterData(); 
     } catch (err) {
@@ -164,11 +196,27 @@ export default function UserManagement() {
   };
 
   const openAddModal = () => {
+    setEditingId(null)
     setFormData({ 
       nik: '',
       nama_lengkap: '', email: '', password: '', role: 'karyawan', 
       marketing_flexible: false, branch_id: branches.length > 0 ? branches[0].branch_id : '', 
       image_base64: '' 
+    });
+    setShowModal(true);
+  };
+
+  const openEditModal = (user) => {
+    setEditingId(user.user_id);
+    setFormData({
+      nik: user.nik || '', 
+      nama_lengkap: user.nama_lengkap,
+      email: user.email,
+      password: '', // Kosongkan, HRD tidak perlu tahu password lama
+      role: user.role,
+      marketing_flexible: user.marketing_flexible,
+      branch_id: user.branch_id || (branches.length > 0 ? branches[0].branch_id : ''),
+      image_base64: '' // Kosongkan, kamera disembunyikan sampai HRD mau foto ulang
     });
     setShowModal(true);
   };
@@ -254,7 +302,10 @@ export default function UserManagement() {
                         )}
                       </td>
                       <td className="p-5">
-                        <div className="flex justify-center gap-3">
+                        <div className="flex justify-center gap-2">
+                          <button onClick={() => openEditModal(user)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition" title="Edit Data">
+                            <Edit size={16} />
+                          </button>
                           <button onClick={() => handleDelete(user.user_id)} className="p-2 text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded-lg transition" title="Hapus">
                             <Trash2 size={18} />
                           </button>
@@ -276,7 +327,9 @@ export default function UserManagement() {
         <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50 shrink-0">
-              <h3 className="font-black text-xl text-gray-800">Registrasi Karyawan Baru</h3>
+              <h3 className="font-black text-xl text-gray-800">
+                {editingId ? "Edit Data Karyawan" : "Registrasi Karyawan Baru"}
+              </h3>
               <button onClick={() => {stopCamera(); setShowModal(false);}} className="p-2 bg-white rounded-full border border-gray-200 hover:bg-red-50 hover:text-red-500 transition">
                 <X size={20} />
               </button>
@@ -290,6 +343,8 @@ export default function UserManagement() {
                   <h4 className="font-bold text-blue-800 mb-3 text-sm flex justify-center items-center gap-2">
                     <User size={18}/> Pendaftaran Wajah Biometrik (Wajib)
                   </h4>
+                  {editingId && <p className="text-xs text-blue-600 font-medium mb-3">(Biarkan jika tidak ingin mengubah foto wajah lama)</p>}
+                  {!editingId && <p className="text-xs text-blue-600 font-medium mb-3">(Wajib dilakukan untuk karyawan baru)</p>}
                   
                   {formData.image_base64 ? (
                     <div className="relative inline-block">
@@ -317,7 +372,7 @@ export default function UserManagement() {
                           <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
                             <Camera size={40} className="mb-2 opacity-50" />
                             <span className="text-xs font-medium px-4 text-center">
-                              Kamera belum aktif. Pastikan wajah karyawan terlihat jelas.
+                              {editingId ? "Klik 'Nyalakan Kamera' jika ingin mengganti wajah." : "Kamera belum aktif. Pastikan wajah terlihat jelas."}
                             </span>
                           </div>
                         )}
@@ -325,11 +380,33 @@ export default function UserManagement() {
                       </div>
 
                       {!isCameraActive ? (
-                        <button type="button" onClick={startCamera} className="bg-gray-800 text-white px-5 py-2 rounded-full font-bold text-sm hover:bg-black transition flex gap-2 items-center">
-                          <Camera size={16}/> Nyalakan Kamera
-                        </button>
+                        <div className="flex flex-col items-center gap-3 w-full max-w-[256px] mt-2">
+                          <button type="button" onClick={startCamera} className="w-full justify-center bg-gray-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-black transition flex gap-2 items-center">
+                            <Camera size={16}/> Gunakan Kamera Laptop
+                          </button>
+                          
+                          {/* --- TAMBAHAN TOMBOL UPLOAD --- */}
+                          <div className="flex items-center w-full gap-2">
+                            <hr className="flex-1 border-gray-300" />
+                            <span className="text-[10px] text-gray-400 font-black uppercase">Atau</span>
+                            <hr className="flex-1 border-gray-300" />
+                          </div>
+                          
+                          <button type="button" onClick={() => fileInputRef.current.click()} className="w-full justify-center bg-indigo-50 text-indigo-700 border border-indigo-200 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-100 transition flex gap-2 items-center">
+                            <User size={16}/> Upload Foto HD
+                          </button>
+                          
+                          {/* Input file yang disembunyikan */}
+                          <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            className="hidden" 
+                            accept="image/jpeg, image/png, image/jpg" 
+                            onChange={handleFileUpload} 
+                          />
+                        </div>
                       ) : (
-                        <button type="button" onClick={capturePhoto} className="bg-green-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-green-700 transition flex gap-2 items-center shadow-lg shadow-green-200 animate-pulse">
+                        <button type="button" onClick={capturePhoto} className="bg-green-600 text-white px-6 py-2 rounded-full font-bold text-sm hover:bg-green-700 transition flex gap-2 items-center shadow-lg shadow-green-200 animate-pulse mt-2">
                           Ambil Wajah
                         </button>
                       )}
@@ -366,9 +443,9 @@ export default function UserManagement() {
                       value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Password Login</label>
-                    <input type="password" required className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm font-medium"
-                      value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Password Login {editingId && <span className="text-orange-500 lowercase normal-case">(Kosongkan jika tak diubah)</span>}</label>
+                    <input type="password" required={!editingId} className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm font-medium"
+                      value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} placeholder={editingId ? "Ketik jika ingin reset password" : ""} />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tingkat Akses (Role)</label>
@@ -432,7 +509,7 @@ export default function UserManagement() {
                 Batal
               </button>
               <button type="submit" form="enrollForm" className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition flex justify-center gap-2 items-center shadow-lg shadow-blue-200 active:scale-95">
-                <Save size={18} /> Simpan Akun
+                <Save size={18} /> {editingId ? "Update Data" : "Simpan Akun"}
               </button>
             </div>
           </div>

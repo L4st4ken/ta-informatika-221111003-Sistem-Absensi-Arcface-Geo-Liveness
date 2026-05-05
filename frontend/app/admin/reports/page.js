@@ -200,7 +200,7 @@ export default function LaporanPage() {
             <p className="text-gray-500 mt-1">Periode: {filterMonth} | Cabang: {filterBranch ? branches.find(b => b.branch_id.toString() === filterBranch)?.nama_cabang : 'Semua Cabang'}</p>
           </div>
 
-          <div className="overflow-x-auto max-h-[600px]">
+          <div className="overflow-x-auto max-h-[600px] print:overflow-visible print:max-h-none">
             <table className="w-full text-sm text-left relative">
               <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 shadow-sm border-b border-gray-100">
                 <tr>
@@ -220,8 +220,25 @@ export default function LaporanPage() {
                     <tr key={idx} className="hover:bg-blue-50/30 transition">
                       <td className="p-5 font-mono text-gray-600 font-medium">{r.tanggal}</td>
                       <td className="p-5">
-                        <p className="font-bold text-gray-800">{r.nama_karyawan}</p>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold mt-0.5">{r.role.toUpperCase()}</p>
+                        <p className="font-bold text-gray-800 text-sm">{r.nama_karyawan}</p>
+                        
+                        <div className="mt-1.5 space-y-0.5">
+                          {/* NIK Karyawan */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest w-12">NIK</span>
+                            <span className="text-[11px] font-mono font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                              {r.nik || '-'}
+                            </span>
+                          </div>
+                          
+                          {/* Jabatan & Mode Mobilitas */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest w-12">Status</span>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-600">
+                              {r.jabatan} • Mode {r.role}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="p-5 font-medium text-gray-700">{r.cabang}</td>
                       {/* KOLOM JAM MASUK */}
@@ -265,7 +282,7 @@ export default function LaporanPage() {
                           <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="p-5 text-center">
+                      <td className="p-5 text-center flex flex-col items-center justify-center">
                         <span className={`px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${
                           r.status_kehadiran === 'Hadir' || r.status_kehadiran === 'Tepat Waktu'
                             ? 'bg-green-50 text-green-700 border-green-200' : 
@@ -273,12 +290,25 @@ export default function LaporanPage() {
                             ? 'bg-blue-50 text-blue-700 border-blue-200' :
                           r.status_kehadiran === 'Izin'
                             ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                          r.status_kehadiran === 'Cuti'
+                            ? 'bg-teal-50 text-teal-700 border-teal-200' :
                           r.status_kehadiran === 'Belum Lengkap'
                             ? 'bg-yellow-50 text-yellow-800 border-yellow-200' : 
                           'bg-red-50 text-red-700 border-red-200' // Alpha/Kosong
                         }`}>
                           {r.status_kehadiran || 'Alpha'}
                         </span>
+
+                        {/* TAMBAHAN BARU: Menampilkan Keterangan/Catatan HRD */}
+                        {r.keterangan_hrd && (
+                          <div 
+                            className="mt-2 flex items-center gap-1 text-[9px] text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100 max-w-[120px] cursor-help"
+                            title={r.keterangan_hrd} // Tooltip bawaan browser jika teks kepanjangan
+                          >
+                            <ClipboardEdit size={10} className="flex-shrink-0 text-indigo-400" />
+                            <span className="truncate italic">&quot;{r.keterangan_hrd}&quot;</span>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -328,8 +358,9 @@ export default function LaporanPage() {
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Status</label>
                   <select required className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm font-bold text-gray-800"
                     value={manualData.status} onChange={e => setManualData({...manualData, status: e.target.value})}>
-                    <option value="Sakit">Sakit 🤒</option>
-                    <option value="Izin">Izin Tertulis 📝</option>
+                    <option value="Sakit">Sakit</option>
+                    <option value="Izin">Izin Tertulis</option>
+                    <option value="Cuti">Cuti</option>
                   </select>
                 </div>
               </div>

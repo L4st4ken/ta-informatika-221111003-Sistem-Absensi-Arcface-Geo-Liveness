@@ -252,7 +252,11 @@ export default function AbsensiPage() {
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4 text-white relative overflow-hidden">
       
-      <button onClick={() => router.back()} className="absolute top-4 left-4 bg-gray-800/80 p-3 rounded-full z-50 hover:bg-gray-700 transition">
+      <button 
+        onClick={() => router.push('/dashboard')} 
+        className="absolute top-4 left-4 bg-gray-800/80 p-3 rounded-full z-50 hover:bg-gray-700 transition"
+        title="Kembali ke Dashboard"
+      >
         <ArrowLeft />
       </button>
 
