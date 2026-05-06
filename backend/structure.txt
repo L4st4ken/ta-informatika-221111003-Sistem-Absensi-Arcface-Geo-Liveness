@@ -10,13 +10,13 @@ structure = {
         "files": ["app.log"]
     },
     f"{project_name}/models": {
-        "files": ["__init__.py", "models.py", "shape_predictor_68_face_landmarks.dat", "w600k_mbf.onnx", "det_500m.onnx" ]
+        "files": ["__init__.py", "models.py", "shape_predictor_68_face_landmarks.dat", "w600k_mbf.onnx", "det_500m.onnx", "minifasnet_v2.onnx", "minifasnet_v2.onnx.data" ]
     },
     f"{project_name}/routes": {
-        "files": ["__init__.py", "admin.py", "attendance.py", "auth.py", "branches.py", "face.py", "schedule.py"]
+        "files": ["__init__.py", "admin.py", "attendance.py", "auth.py", "branches.py", "face.py", "schedule.py", "dashboard.py"]
     },
     f"{project_name}/services": {
-        "files": ["face_detector.py", "face_service.py", "geofence_service.py", "liveness_manager.py", "liveness_service.py"]
+        "files": ["face_detector.py", "face_service.py", "geofence_service.py", "liveness_service.py"]
     },
     f"{project_name}/utils": {
         "files": ["crypto.py", "roles.py", "token_store.py", "tokens.py", "validation.py"]

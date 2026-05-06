@@ -1,106 +1,104 @@
-import collections
-from imutils import face_utils
+import cv2
 import numpy as np
-import cv2  # Kita butuh cv2 di sini untuk konversi darurat
+import os
+import sys
+import onnxruntime as ort
+import insightface
+
+# ==========================================
+# PENGATURAN PATH OTOMATIS
+# ==========================================
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODELS_DIR = os.path.join(BASE_DIR, "models")
+FAS_DIR = os.path.join(BASE_DIR, "Silent-Face-Anti-Spoofing")
+sys.path.append(FAS_DIR)
+
+from src.generate_patches import CropImage
 
 class LivenessService:
-    def __init__(self, predictor, left_eye_idx=(42,48), right_eye_idx=(36,42), ear_threshold=0.25, consec_frames_for_blink=1, smooth_window=5):
-        self.predictor = predictor
-        self.left_start, self.left_end = left_eye_idx
-        self.right_start, self.right_end = right_eye_idx
-        self.EAR_THRESH = ear_threshold
-        self.COUNTER_FOR_BLINK = consec_frames_for_blink
-        self.SMOOTH_WINDOW = smooth_window
-        self.reset()
+    def __init__(self):
+        print("[INFO] Memuat Trisula AI ke dalam memori Server Flask...")
+        
+        # 1. Load Detektor Wajah Lokal
+        det_path = os.path.join(MODELS_DIR, "det_500m.onnx")
+        self.det_model = insightface.model_zoo.get_model(det_path, providers=['CPUExecutionProvider'])
+        self.det_model.prepare(ctx_id=0, input_size=(640, 640))
 
-    def reset(self, target_blinks=None):
-        self.target_blinks = target_blinks if target_blinks is not None else 1
-        self.blink_count = 0
-        self.prev_eye_open = True
-        self._ear_history = collections.deque(maxlen=self.SMOOTH_WINDOW)
-        self._closed_frame_counter = 0
-        self._open_frame_counter = 0
+        # 2. Load Liveness MiniFASNet Lokal
+        fas_path = os.path.join(MODELS_DIR, "minifasnet_v2.onnx")
+        self.fas_model = ort.InferenceSession(fas_path, providers=['CPUExecutionProvider'])
+        self.image_cropper = CropImage()
+        
+        print("[INFO] Liveness Service Siap Menerima Request!")
 
-    def euclidean_dist(self, ptA, ptB):
-        return np.linalg.norm(ptA - ptB)
+    def softmax(self, x):
+        e_x = np.exp(x - np.max(x))
+        return e_x / e_x.sum(axis=1, keepdims=True)
 
-    def eye_aspect_ratio(self, eye):
-        A = self.euclidean_dist(eye[1], eye[5])
-        B = self.euclidean_dist(eye[2], eye[4])
-        C = self.euclidean_dist(eye[0], eye[3])
-        if C == 0: return 0.0
-        return (A + B) / (2.0 * C)
-
-    def _smooth_ear(self, ear):
-        self._ear_history.append(ear)
-        return float(np.median(np.array(self._ear_history, dtype=np.float32)))
-
-    def process_frame(self, frame_input, face_rect):
+    def check_liveness(self, image_bgr):
+        """
+        Menerima gambar BGR (dari endpoint Flask), mengembalikan status Liveness, 
+        Bounding Box, dan Titik Landmark (KPSS) untuk ArcFace.
+        """
         try:
-            # --- HARD FIX UNTUK DLIB ---
-            # 1. Pastikan input tidak None
-            if frame_input is None:
-                print("Error: Frame input kosong (None)")
-                return False
-
-            # 2. Cek apakah input 3 Channel (BGR) atau 2 Channel (Gray)
-            # Dlib predictor butuh GRAYSCALE (2D array)
-            if len(frame_input.shape) == 3:
-                # Jika user tidak sengaja kirim BGR, kita ubah paksa jadi Gray
-                gray_frame = cv2.cvtColor(frame_input, cv2.COLOR_BGR2GRAY)
-            else:
-                gray_frame = frame_input
-
-            # 3. Paksa tipe data uint8 dan contiguous memory (WAJIB BUAT DLIB)
-            gray_frame = np.array(gray_frame, dtype=np.uint8, copy=True)
-            gray_frame = np.ascontiguousarray(gray_frame)
-
-            # 4. Validasi ukuran Rect agar tidak crash jika kotak keluar gambar
-            h, w = gray_frame.shape
-            l = max(0, face_rect.left())
-            t = max(0, face_rect.top())
-            r = min(w, face_rect.right())
-            b = min(h, face_rect.bottom())
+            # --------------------------------------------------
+            # TAHAP A: CARI WAJAH
+            # --------------------------------------------------
+            bboxes, kpss = self.det_model.detect(image_bgr)
             
-            # Buat rect baru yang aman (clamped)
-            import dlib
-            safe_rect = dlib.rectangle(l, t, r, b)
-            # ---------------------------
-
-            # Debug Print (Untuk memastikan data benar)
-            # Uncomment baris ini jika masih error untuk melihat info gambarnya
-            # print(f"DEBUG IMG -> Shape: {gray_frame.shape}, Dtype: {gray_frame.dtype}")
-
-            shape = self.predictor(gray_frame, safe_rect)
-            shape = face_utils.shape_to_np(shape)
+            if bboxes is None or len(bboxes) == 0:
+                return {
+                    "is_live": False, 
+                    "msg": "Wajah tidak terdeteksi oleh sistem.", 
+                    "score": 0.0, 
+                    "bbox": None, 
+                    "kpss": None
+                }
             
-            leftEye = shape[self.left_start:self.left_end]
-            rightEye = shape[self.right_start:self.right_end]
+            # Ambil wajah pertama (paling dominan)
+            bbox = bboxes[0]
+            x1, y1, x2, y2, det_score = bbox
+            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
             
-            ear = (self.eye_aspect_ratio(leftEye) + self.eye_aspect_ratio(rightEye)) / 2.0
-            ear_sm = self._smooth_ear(ear)
+            w = x2 - x1
+            h = y2 - y1
+            image_bbox = [x1, y1, w, h]
+
+            # --------------------------------------------------
+            # TAHAP B: CEK LIVENESS (ONNX)
+            # --------------------------------------------------
+            param = {
+                "org_img": image_bgr, "bbox": image_bbox, "scale": 2.7, 
+                "out_w": 80, "out_h": 80, "crop": True
+            }
+            img_crop = self.image_cropper.crop(**param) 
             
-            status = "OPEN" if ear_sm > self.EAR_THRESH else "CLOSED"
-            print(f"DEBUG >> EAR: {ear_sm:.3f} | Thresh: {self.EAR_THRESH} | Status: {status} | Blinks: {self.blink_count}")
+            img_blob = img_crop.astype(np.float32)
+            img_blob = np.transpose(img_blob, (2, 0, 1)) 
+            img_blob = np.expand_dims(img_blob, axis=0)  
+            
+            ort_inputs = {self.fas_model.get_inputs()[0].name: img_blob}
+            ort_outs = self.fas_model.run(None, ort_inputs)
+            result = ort_outs[0]
+            
+            prob = self.softmax(result)
+            label = np.argmax(prob) 
+            score = float(prob[0][label]) # Ubah ke float murni agar bisa di-JSON-kan oleh Flask
+            
+            is_live = (label == 1)
 
-            eye_open = ear_sm > self.EAR_THRESH
+            # --------------------------------------------------
+            # TAHAP C: KEMBALIKAN HASIL KE FLASK
+            # --------------------------------------------------
+            return {
+                "is_live": is_live,
+                "msg": "Liveness Passed" if is_live else "Spoofing Terdeteksi!",
+                "score": score,
+                "bbox": [x1, y1, x2, y2],
+                # KUNCI EMAS: Kita kirimkan juga kpss (Landmark) agar ArcFace tidak perlu mencari ulang!
+                "kpss": kpss[0] 
+            }
 
-            if not eye_open: 
-                self._closed_frame_counter += 1
-                self._open_frame_counter = 0
-            else: 
-                self._open_frame_counter += 1
-                if self._closed_frame_counter >= self.COUNTER_FOR_BLINK and not self.prev_eye_open:
-                    self.blink_count += 1
-                    print("!!! BLINK DETECTED !!!") 
-                self._closed_frame_counter = 0
-
-            if self._open_frame_counter >= self.COUNTER_FOR_BLINK:
-                self.prev_eye_open = True
-            elif self._closed_frame_counter >= self.COUNTER_FOR_BLINK:
-                self.prev_eye_open = False
-
-            return self.blink_count >= self.target_blinks
         except Exception as e:
-            print(f"Error logic di process_frame: {e}")
-            return False
+            print(f"[ERROR] Terjadi kegagalan di Liveness Service: {e}")
+            return {"is_live": False, "msg": "Terjadi kesalahan internal server.", "score": 0.0, "bbox": None, "kpss": None}

@@ -1,155 +1,102 @@
 import cv2
-import requests
-import base64
-import json
-import time
+import dlib
 import numpy as np
+import imutils
+from imutils import face_utils
 
-# --- KONFIGURASI ---
-BASE_URL = "http://127.0.0.1:5000"
-EMAIL = "hana@example.com" 
-PASSWORD = "123456"
+# --- FUNGSI MENGHITUNG JARAK MATA (EAR) ---
+def euclidean_dist(ptA, ptB):
+    return np.linalg.norm(ptA - ptB)
 
-# --- KOORDINAT PALSU (Simulasi GPS HP) ---
-# Ganti angka ini sesuai koordinat cabang di Database Anda nanti
-# Agar dianggap "Hadir", jaraknya harus dekat.
-MOCK_LAT = -6.873252  # Contoh: Monas
-MOCK_LON = 107.542403
-
-MOCK_TIME = "16:05"
-
-def login():
-    try:
-        resp = requests.post(f"{BASE_URL}/auth/login", json={
-            "email": EMAIL, "password": PASSWORD
-        })
-        if resp.status_code == 200:
-            token = resp.json().get("access_token")
-            print(f"✅ Login Sukses!")
-            return token
-        else:
-            print(f"❌ Login Gagal: {resp.text}")
-            return None
-    except Exception as e:
-        print(f"❌ Gagal koneksi ke server: {e}")
-        return None
-
-def register_face_mode(token):
-    print("\n=== MODE REGISTRASI WAJAH ===")
-    print("Tekan SPASI untuk register. Q untuk batal.")
-    cap = cv2.VideoCapture(0)
-    headers = {"Authorization": f"Bearer {token}"}
-
-    while True:
-        ret, frame = cap.read()
-        if not ret: break
-        cv2.imshow("Client Register", frame)
-        key = cv2.waitKey(1)
-
-        if key == ord(' '):
-            print("📸 Mengirim foto...")
-            _, buffer = cv2.imencode('.jpg', frame)
-            img_base64 = "data:image/jpeg;base64," + base64.b64encode(buffer).decode('utf-8')
-            try:
-                resp = requests.post(
-                    f"{BASE_URL}/face/upload-embedding",
-                    headers=headers,
-                    json={"image_base64": img_base64}
-                )
-                print("✅ STATUS:", resp.json().get("msg"))
-                break
-            except Exception as e:
-                print(f"Error: {e}")
-        elif key == ord('q'): break
-            
-    cap.release()
-    cv2.destroyAllWindows()
-
-def liveness_mode(token):
-    print("\n=== MODE ABSENSI (LIVENESS + GPS) ===")
-    headers = {"Authorization": f"Bearer {token}"}
+def eye_aspect_ratio(eye):
+    # Menghitung jarak vertikal mata
+    A = euclidean_dist(eye[1], eye[5])
+    B = euclidean_dist(eye[2], eye[4])
+    # Menghitung jarak horizontal mata
+    C = euclidean_dist(eye[0], eye[3])
     
-    resp = requests.post(f"{BASE_URL}/face/liveness/start", headers=headers)
-    if resp.status_code != 200:
-        print("Gagal start session")
-        return
+    if C == 0: return 0.0
+    # Rumus EAR
+    return (A + B) / (2.0 * C)
 
-    cap = cv2.VideoCapture(0)
-    print("Tekan 'q' untuk stop.")
+# --- KONFIGURASI DLIB ---
+EAR_THRESH = 0.25      # Batas nilai mata dianggap tertutup (bisa disesuaikan)
+EAR_CONSEC_FRAMES = 2  # Berapa frame berturut-turut mata harus tertutup
 
-    while True:
-        ret, frame = cap.read()
-        if not ret: break
+print("[INFO] Memuat model Dlib...")
+detector = dlib.get_frontal_face_detector()
+predictor = dlib.shape_predictor("models/shape_predictor_68_face_landmarks.dat")
 
-        _, buffer = cv2.imencode('.jpg', frame)
-        img_base64 = "data:image/jpeg;base64," + base64.b64encode(buffer).decode('utf-8')
+# Mengambil indeks titik koordinat untuk mata kiri dan kanan (dari 68 titik)
+(lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
+(rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
 
-        try:
-            start_time = time.time()
-            # --- UPDATE DISINI: KIRIM LAT/LON ---
-            payload = {
-                "image_base64": img_base64,
-                "latitude": MOCK_LAT,  # Kirim GPS
-                "longitude": MOCK_LON,
-                "mock_time": MOCK_TIME
-            }
+# Variabel penghitung
+COUNTER = 0
+TOTAL_BLINKS = 0
+
+print("[INFO] Menyalakan Webcam... (Tekan 'q' untuk keluar)")
+cap = cv2.VideoCapture(0)
+
+while True:
+    ret, frame = cap.read()
+    if not ret: break
+    
+    # Efek cermin agar pergerakan natural
+    frame = cv2.flip(frame, 1)
+    # Dlib butuh gambar grayscale (hitam putih) agar prosesnya sedikit lebih ringan
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    
+    # Deteksi wajah di dalam frame
+    rects = detector(gray, 0)
+    
+    for rect in rects:
+        # Cari 68 titik landmark di wajah yang terdeteksi
+        shape = predictor(gray, rect)
+        shape = face_utils.shape_to_np(shape)
+        
+        # Ekstrak koordinat mata
+        leftEye = shape[lStart:lEnd]
+        rightEye = shape[rStart:rEnd]
+        
+        # Hitung rasio EAR untuk kedua mata
+        leftEAR = eye_aspect_ratio(leftEye)
+        rightEAR = eye_aspect_ratio(rightEye)
+        
+        # Ambil rata-rata EAR dari kedua mata
+        ear = (leftEAR + rightEAR) / 2.0
+        
+        # --- VISUALISASI: MENGGAMBAR GARIS DI MATA ---
+        leftEyeHull = cv2.convexHull(leftEye)
+        rightEyeHull = cv2.convexHull(rightEye)
+        cv2.drawContours(frame, [leftEyeHull], -1, (0, 255, 0), 1)
+        cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
+        
+        # --- LOGIKA KEDIPAN ---
+        if ear < EAR_THRESH:
+            # Jika mata tertutup, tambah counter frame
+            COUNTER += 1
+        else:
+            # Jika mata terbuka, cek apakah sebelumnya sempat tertutup cukup lama
+            if COUNTER >= EAR_CONSEC_FRAMES:
+                TOTAL_BLINKS += 1
+            COUNTER = 0
             
-            resp = requests.post(
-                f"{BASE_URL}/face/liveness/frame", 
-                headers=headers,
-                json=payload
-            )
-            latency = (time.time() - start_time) * 1000 
-            
-            if resp.status_code == 200:
-                data = resp.json()
-                status = data.get("status")
-                msg = data.get("msg", "")
-                
-                # Visualisasi UI
-                if "guide_box" in data:
-                    gx1, gy1, gx2, gy2 = data["guide_box"]
-                    color = (0, 0, 255) 
-                    if status == "processing": color = (0, 255, 0)
-                    elif status == "liveness_passed": color = (255, 255, 0)
-                    cv2.rectangle(frame, (gx1, gy1), (gx2, gy2), color, 2)
-                    cv2.putText(frame, msg, (gx1, gy1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+        # --- MENAMPILKAN TEKS DI LAYAR ---
+        cv2.putText(frame, f"Kedipan: {TOTAL_BLINKS}", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        cv2.putText(frame, f"EAR: {ear:.2f}", (250, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        
+        # Simulasi "Liveness Berhasil" jika sudah berkedip 3 kali
+        if TOTAL_BLINKS >= 3:
+            cv2.putText(frame, "LIVENESS BERHASIL (Hidup)!", (50, 100),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
 
-                if "face_box" in data:
-                    fx1, fy1, fx2, fy2 = data["face_box"]
-                    cv2.rectangle(frame, (fx1, fy1), (fx2, fy2), (255, 0, 0), 1)
+    cv2.imshow("Uji Kedipan Dlib (Offline)", frame)
+    
+    if cv2.waitKey(1) == ord('q'):
+        break
 
-                if status == "liveness_passed":
-                    final_score = data.get("face_similarity_score", 0.0)
-                    cv2.putText(frame, f"PASSED! Score: {final_score:.2f}", (50, 50), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 3)
-                    print(f"🎉 SUKSES! {msg}")
-                    cv2.imshow("Client Simulation", frame)
-                    cv2.waitKey(2000)
-                    break 
-                
-                # Print status
-                print(f"Server: {status} | GPS: {MOCK_LAT},{MOCK_LON} | {msg}")
-
-            else:
-                print(f"Server Error: {resp.status_code} - {resp.text}")
-
-        except Exception as e:
-            print(f"Error Request: {e}")
-
-        cv2.imshow("Client Simulation", frame)
-        if cv2.waitKey(1) == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    tk = login()
-    if tk:
-        while True:
-            print("\n1. Register | 2. Absensi (+GPS)")
-            p = input("Pilih: ")
-            if p == '1': register_face_mode(tk)
-            elif p == '2': liveness_mode(tk)
-            elif p == 'q': break
+cap.release()
+cv2.destroyAllWindows()
