@@ -1,4 +1,5 @@
 # utils/validation.py
+# Belum dipakai projek
 import base64
 import numpy as np
 import cv2

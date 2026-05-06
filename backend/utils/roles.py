@@ -1,3 +1,4 @@
+# Belum dipakai projek
 from flask import jsonify
 from flask_jwt_extended import get_jwt
 from functools import wraps

@@ -1,4 +1,6 @@
 # utils/crypto.py
+# Belum dipakai projek
+
 from cryptography.fernet import Fernet, InvalidToken
 import base64
 import os
