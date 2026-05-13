@@ -9,7 +9,7 @@ from sqlalchemy import desc
 from datetime import datetime, timedelta, date
 
 from database.connection import get_db
-from models.models import User, Branch, FaceEmbedding, AttendanceLog
+from models.models import User, Branch, FaceEmbedding, AttendanceLog, TugasLuar
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from services.liveness_service import LivenessService
@@ -50,12 +50,12 @@ def process_attendance():
     if not image_base64:
         return jsonify({"status": "Failed", "msg": "Gambar tidak ditemukan."}), 400
 
-    def save_log(is_live, score, status, branch_id, dist, msg):
+    def save_log(is_live, score, status, branch_id, dist, msg, t_id=None):
         # Logika proteksi ganda: Pastikan laporan hanya tersimpan saat absen PULANG (OUT)
         laporan_final = laporan_teks if attempt_type == 'OUT' else None
         
         new_log = AttendanceLog(
-            user_id=user_id, attempted_branch_id=branch_id, attempt_type=attempt_type,
+            user_id=user_id, attempted_branch_id=branch_id, tugas_id=t_id, attempt_type=attempt_type,
             latitude_attempt=user_lat, longitude_attempt=user_lon, distance_meters=dist,
             is_live=is_live, similarity_score=score, status=status,
             laporan_kegiatan=laporan_final # <--- TAMBAHAN BARU: Masukkan ke database
@@ -65,23 +65,44 @@ def process_attendance():
     try:
         user = db.query(User).filter_by(user_id=user_id).first()
         dist_m = None
-        
-        # 1. GEOFENCING
-        if not user.marketing_flexible:
+        sekarang_wib = (datetime.utcnow() + timedelta(hours=7)).date()
+        tugas_aktif = None
+        is_bypass_geofence = False
+
+        # PERBAIKAN 2: CEK HAK ISTIMEWA GEOFENCE (Context-Aware Logic)
+        if user.is_dynamic:
+            is_bypass_geofence = True
+        else:
+            # Cek apakah ada surat tugas aktif hari ini
+            tugas_aktif = db.query(TugasLuar).filter(
+                TugasLuar.user_id == user.user_id,
+                TugasLuar.tanggal_mulai <= sekarang_wib,
+                TugasLuar.tanggal_selesai >= sekarang_wib
+            ).first()
+
+            if tugas_aktif:
+                is_bypass_geofence = True
+
+        # 1. GEOFENCING VALIDATION
+        if not is_bypass_geofence:
             branch = db.query(Branch).filter_by(branch_id=user.branch_id).first()
             if branch:
                 b_lat = float(branch.latitude)
                 b_lon = float(branch.longitude)
                 dist_m = calculate_haversine(user_lat, user_lon, b_lat, b_lon)
                 if dist_m > branch.radius_meter:
-                    save_log(None, None, 'Failed', branch.branch_id, dist_m, "Luar Radius")
+                    save_log(None, None, 'Failed', branch.branch_id, dist_m, "Luar Radius", t_id=None)
                     return jsonify({"status": "Failed", "msg": f"Luar area: {dist_m:.0f}m dari cabang."}), 403
+
+        # Dapatkan ID Cabang dan ID Tugas untuk dicatat di Log
+        b_id = user.branch_id if not user.is_dynamic else None
+        t_id_untuk_log = tugas_aktif.tugas_id if tugas_aktif else None
 
         # 2. LIVENESS
         img = decode_base64_to_bgr(image_base64)
         live_res = liveness_svc.check_liveness(img)
         if not live_res["is_live"]:
-            save_log(False, None, 'Failed', user.branch_id, dist_m, "Spoofing")
+            save_log(False, None, 'Failed', b_id, dist_m, "Spoofing", t_id=t_id_untuk_log)
             return jsonify({"status": "Failed", "msg": "Wajah palsu terdeteksi!"}), 403
 
         # 3. ARCFACE
@@ -93,11 +114,18 @@ def process_attendance():
         
         score = calculate_cosine_similarity(curr_vec, db_vec)
         if score < threshold:
-            save_log(True, float(score), 'Failed', user.branch_id, dist_m, "Wajah Beda")
+            save_log(True, float(score), 'Failed', b_id, dist_m, "Wajah Beda", t_id=t_id_untuk_log)
             return jsonify({"status": "Failed", "msg": f"Wajah tidak cocok ({score*100:.1f}%)."}), 403
 
-        save_log(True, float(score), 'Success', user.branch_id, dist_m, "OK")
-        return jsonify({"status": "Success", "msg": f"Absen {attempt_type} Berhasil!"}), 200
+        # 4. SUKSES PRESENSI
+        save_log(True, float(score), 'Success', b_id, dist_m, "OK", t_id=t_id_untuk_log)
+        
+        pesan_sukses = f"Absen {attempt_type} Berhasil!"
+        if tugas_aktif:
+            pesan_sukses += " (Izin Dinas Luar Aktif)"
+
+        return jsonify({"status": "Success", "msg": pesan_sukses}), 200
+
     except Exception as e:
         return jsonify({"status": "error", "msg": str(e)}), 500
     
@@ -124,13 +152,32 @@ def get_office_location():
     user_id = get_jwt_identity()
     user = db.query(User).filter_by(user_id=user_id).first()
 
-    if user.marketing_flexible or not user.branch_id:
-        return jsonify({"is_flexible": True}), 200
+    # 1. Jika memang karyawan Dinamis (Sales/Kurir)
+    if user.is_dynamic:
+        return jsonify({"is_flexible": True, "is_tugas_luar": False}), 200
 
+    # 2. Cek apakah Karyawan Statis ini punya Tugas Luar HARI INI
+    sekarang_wib = (datetime.utcnow() + timedelta(hours=7)).date()
+    tugas_aktif = db.query(TugasLuar).filter(
+        TugasLuar.user_id == user_id,
+        TugasLuar.tanggal_mulai <= sekarang_wib,
+        TugasLuar.tanggal_selesai >= sekarang_wib
+    ).first()
+
+    if tugas_aktif:
+        # Kita manipulasi jadi flexible=True agar Frontend membuka gembok tombolnya
+        return jsonify({
+            "is_flexible": True, 
+            "is_tugas_luar": True,
+            "keterangan_tugas": tugas_aktif.keterangan
+        }), 200
+
+    # 3. Karyawan Statis Normal (Wajib di Kantor)
     branch = db.query(Branch).filter_by(branch_id=user.branch_id).first()
     if branch:
         return jsonify({
             "is_flexible": False,
+            "is_tugas_luar": False,
             "latitude": branch.latitude,
             "longitude": branch.longitude,
             "radius_meter": branch.radius_meter

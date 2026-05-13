@@ -50,7 +50,7 @@ def login():
             "role": user.role,
             "branch_id": user.branch_id,
             # KUNCI FRONTEND: Kirim status fleksibel agar HP tahu harus cek GPS atau tidak
-            "marketing_flexible": user.marketing_flexible 
+            "is_dynamic": user.is_dynamic 
         }
     }), 200
 
@@ -88,5 +88,5 @@ def get_me():
         "email": user.email,
         "role": user.role,
         "branch_id": user.branch_id,
-        "marketing_flexible": user.marketing_flexible
+        "is_dynamic": user.is_dynamic
     }), 200

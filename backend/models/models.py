@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Enum, DateTime, LargeBinary, DECIMAL, Text
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, Enum, DateTime, LargeBinary, DECIMAL, Text, Date
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database.connection import Base
@@ -37,12 +37,13 @@ class User(Base):
     branch_id = Column(Integer, ForeignKey("branches.branch_id", ondelete="SET NULL"), nullable=True)
     
     # KUNCI FLEKSIBILITAS: Pengganti sistem BKO/Dinas Luar yang rumit
-    marketing_flexible = Column(Boolean, default=False)
+    is_dynamic = Column(Boolean, default=False)
 
     # Relationships
     branch = relationship("Branch", back_populates="users")
     embeddings = relationship("FaceEmbedding", back_populates="user", cascade="all, delete-orphan", uselist=False)
     attendance_logs = relationship("AttendanceLog", back_populates="user", cascade="all, delete-orphan")
+    tugas_luar = relationship("TugasLuar", back_populates="user", cascade="all, delete-orphan")
 
 # -----------------------------
 # 3. Face Embedding (Vektor Biometrik AI)
@@ -66,6 +67,7 @@ class AttendanceLog(Base):
     log_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
     attempted_branch_id = Column(Integer, ForeignKey("branches.branch_id", ondelete="SET NULL"), nullable=True)
+    tugas_id = Column(Integer, ForeignKey("tugas_luar.tugas_id", ondelete="SET NULL"), nullable=True)
     
     # Event-Based: Setiap jepret kamera = 1 baris di tabel ini
     attempt_type = Column(Enum('IN', 'OUT', 'MANUAL'), nullable=False)
@@ -84,3 +86,24 @@ class AttendanceLog(Base):
     # Relationships
     user = relationship("User", back_populates="attendance_logs")
     branch = relationship("Branch", back_populates="attendance_logs")
+    tugas_luar = relationship("TugasLuar", back_populates="attendance_logs")
+
+# -----------------------------
+# 5. Tugas Luar (Dispensasi Geofence Lapangan)
+# -----------------------------
+class TugasLuar(Base):
+    __tablename__ = "tugas_luar"
+
+    tugas_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    
+    # Menggunakan tipe Date (Tanggal) karena dispensasi hitungannya per hari, bukan jam
+    tanggal_mulai = Column(Date, nullable=False)
+    tanggal_selesai = Column(Date, nullable=False)
+    
+    keterangan = Column(String(255), nullable=True) # Contoh: "Meeting di Hotel XYZ"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="tugas_luar")
+    attendance_logs = relationship("AttendanceLog", back_populates="tugas_luar")

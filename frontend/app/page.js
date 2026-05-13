@@ -38,7 +38,7 @@ export default function LoginPage() {
         localStorage.setItem('access_token', res.data.access_token);
         localStorage.setItem('user_role', res.data.user.role);
         // KUNCI PENTING: Simpan flag fleksibel untuk bypass GPS di halaman Kamera!
-        localStorage.setItem('marketing_flexible', res.data.user.marketing_flexible);
+        localStorage.setItem('is_dynamic', res.data.user.is_dynamic);
         
         // 2. Routing Berdasarkan Role yang Sederhana (admin vs karyawan)
         if (res.data.user.role === 'admin') {
@@ -131,7 +131,7 @@ export default function LoginPage() {
         {/* Info Text Menggantikan Link Register */}
         <div className="mt-8 pt-6 border-t border-gray-100 text-center">
           <p className="text-xs text-gray-400 font-medium">
-            Akses sistem dikelola secara terpusat oleh Departemen SDM.
+            Skripsi TA Alvin Ricardo - 221111003.
           </p>
         </div>
 

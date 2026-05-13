@@ -14,7 +14,7 @@ export default function RiwayatPage() {
     const fetchHistory = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        if (!token) { router.push('/login'); return; }
+        if (!token) { router.push('/'); return; }
 
         const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; 
 

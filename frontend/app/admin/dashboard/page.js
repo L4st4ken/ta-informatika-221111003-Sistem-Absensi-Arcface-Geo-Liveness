@@ -5,7 +5,7 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { 
   Users, UserCheck, AlertTriangle, LogOut, 
-  MapPin, FileText, ShieldAlert, Activity, ArrowRightLeft, Search, Filter, ExternalLink
+  MapPin, FileText, ShieldAlert, Activity, ArrowRightLeft, Search, Filter, ExternalLink, Briefcase
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
       try {
         const token = localStorage.getItem('access_token');
         if (!token) {
-          if (isMounted) router.push('/login');
+          if (isMounted) router.push('/');
           return;
         }
 
@@ -65,7 +65,7 @@ export default function AdminDashboard() {
         console.error(err);
         if (err.response?.status === 401 || err.response?.status === 403 || err.response?.status === 422) {
           localStorage.removeItem('access_token');
-          if (isMounted) router.push('/login');
+          if (isMounted) router.push('/');
         }
       }
     };
@@ -120,8 +120,10 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4"> 
           <MenuButton title="Kelola Karyawan" icon={<Users size={24}/>} color="blue" onClick={() => router.push('/admin/users')} />
           <MenuButton title="Lokasi Cabang" icon={<MapPin size={24}/>} color="orange" onClick={() => router.push('/admin/branches')} />
+          <MenuButton title="Izin Tugas Luar" icon={<Briefcase size={24}/>} color="purple" onClick={() => router.push('/admin/tugas-luar')} />
           <MenuButton title="Export Laporan" icon={<FileText size={24}/>} color="green" onClick={() => router.push('/admin/reports')} />
           <MenuButton title="Log Anomali AI" icon={<ShieldAlert size={24}/>} color="red" onClick={() => router.push('/admin/anomalies')} />
+          <MenuButton title="Monitoring & Audit" icon={<Search size={24}/>} color="indigo" onClick={() => router.push('/admin/monitoring')} />
         </div>
         
         {/* 3. Statistik Cards */}
@@ -296,6 +298,7 @@ function MenuButton({ title, icon, color, onClick }) {
     orange: "text-orange-600 group-hover:bg-orange-600 group-hover:text-white bg-orange-50",
     green: "text-green-600 group-hover:bg-green-600 group-hover:text-white bg-green-50",
     red: "text-red-600 group-hover:bg-red-600 group-hover:text-white bg-red-50",
+    purple: "text-purple-600 group-hover:bg-purple-600 group-hover:text-white bg-purple-50",
   };
 
   return (

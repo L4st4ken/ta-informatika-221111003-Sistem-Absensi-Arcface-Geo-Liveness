@@ -23,7 +23,7 @@ export default function BranchManagement() {
   const fetchBranches = useCallback(async () => {
     try {
       const token = localStorage.getItem('access_token');
-      if (!token) { router.push('/login'); return; }
+      if (!token) { router.push('/'); return; }
 
       const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; // Sesuaikan jika pakai Ngrok
 
@@ -35,7 +35,7 @@ export default function BranchManagement() {
       console.error(err);
       if (err.response?.status === 401 || err.response?.status === 403) {
           localStorage.removeItem('access_token');
-          router.push('/login');
+          router.push('/');
       }
     } finally {
         setLoading(false);

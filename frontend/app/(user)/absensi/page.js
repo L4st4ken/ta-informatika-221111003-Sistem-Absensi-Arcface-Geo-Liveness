@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import axios from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, MapPin, AlertCircle } from 'lucide-react';
+import { ArrowLeft, MapPin, AlertCircle, Briefcase } from 'lucide-react';
 
 // Rumus Haversine versi JavaScript
 const calculateHaversine = (lat1, lon1, lat2, lon2) => {
@@ -31,6 +31,8 @@ export default function AbsensiPage() {
   const [statusColor, setStatusColor] = useState("border-gray-500"); 
   
   const [isFlexible, setIsFlexible] = useState(false); 
+  const [isTugasLuar, setIsTugasLuar] = useState(false);
+  const [infoTugas, setInfoTugas] = useState("");
   
   const [distanceToOffice, setDistanceToOffice] = useState(null);
   const [officeLocation, setOfficeLocation] = useState({ lat: null, lon: null, radius: 50 });
@@ -59,7 +61,7 @@ export default function AbsensiPage() {
 
     const initData = async () => {
       const token = localStorage.getItem('access_token');
-      if (!token) { router.push('/login'); return; }
+      if (!token) { router.push('/'); return; }
 
       try {
         // A. AMBIL DATA CABANG DARI BACKEND
@@ -73,6 +75,11 @@ export default function AbsensiPage() {
         
         if (isMounted) {
           setIsFlexible(branchData.is_flexible);
+          if (branchData.is_tugas_luar) {
+            setIsTugasLuar(true);
+            setInfoTugas(branchData.keterangan_tugas);
+          }
+
           if (!branchData.is_flexible) {
             setOfficeLocation({ 
               lat: branchData.latitude, 
@@ -305,6 +312,16 @@ export default function AbsensiPage() {
           </div>
         )}
       </div>
+
+      {isTugasLuar && countdown === null && !isProcessing && !isSuccess && !isFailed && (
+        <div className="w-full max-w-[480px] mt-4 bg-purple-900/60 border border-purple-500 rounded-xl p-4 shadow-lg flex items-start gap-3 animate-pulse">
+          <Briefcase className="text-purple-400 shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-purple-300 text-xs font-black uppercase tracking-wider mb-1">Dispensasi Lokasi Aktif</p>
+            <p className="text-white text-sm font-medium">Surat Tugas: {infoTugas}</p>
+          </div>
+        </div>
+      )}
 
       {/* --- FORM SOP DAN LAPORAN (HANYA MUNCUL SAAT PULANG & FLEKSIBEL) --- */}
       {attemptType === 'OUT' && isFlexible && countdown === null && !isProcessing && !isSuccess && !isFailed && (

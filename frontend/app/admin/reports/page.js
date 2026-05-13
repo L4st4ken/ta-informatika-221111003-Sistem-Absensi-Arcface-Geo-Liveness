@@ -13,6 +13,8 @@ export default function LaporanPage() {
   const [loading, setLoading] = useState(true);
   
   // State Filter & Search
+  const [filterType, setFilterType] = useState('monthly'); // 'daily' atau 'monthly'
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterMonth, setFilterMonth] = useState(new Date().toISOString().slice(0, 7)); 
   const [filterBranch, setFilterBranch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,7 +34,7 @@ export default function LaporanPage() {
   const fetchMasterData = useCallback(async () => {
     try {
       const token = localStorage.getItem('access_token');
-      if (!token) return router.push('/login');
+      if (!token) return router.push('/');
       
       const config = { headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' } };
       
@@ -46,7 +48,7 @@ export default function LaporanPage() {
       setUsers(resUsers.data.filter(u => u.role !== 'admin'));
     } catch (e) { 
       console.error(e); 
-      if (e.response?.status === 401) router.push('/login');
+      if (e.response?.status === 401) router.push('/');
     }
   }, [router]);
 
@@ -55,10 +57,14 @@ export default function LaporanPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      const year = filterMonth.split('-')[0];
-      const month = parseInt(filterMonth.split('-')[1], 10);
-      
-      let url = `${API_URL}/admin/reports?month=${month}&year=${year}`;
+      let url = `${API_URL}/admin/reports?`;
+      if (filterType === 'daily') {
+        url += `date=${filterDate}`;
+      } else {
+        const year = filterMonth.split('-')[0];
+        const month = parseInt(filterMonth.split('-')[1], 10);
+        url += `month=${month}&year=${year}`;
+      }
       if (filterBranch) url += `&branch_id=${filterBranch}`;
 
       const res = await axios.get(url, { 
@@ -70,7 +76,7 @@ export default function LaporanPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterMonth, filterBranch]);
+  }, [filterType, filterDate, filterMonth, filterBranch]);
 
   useEffect(() => {
     fetchMasterData();
@@ -84,10 +90,19 @@ export default function LaporanPage() {
   const handleExportExcel = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      const year = filterMonth.split('-')[0];
-      const month = parseInt(filterMonth.split('-')[1], 10);
       
-      let url = `${API_URL}/admin/export/attendance?month=${month}&year=${year}`;
+      let url = `${API_URL}/admin/export/attendance?`;
+      let fileName = '';
+
+      if (filterType === 'daily') {
+        url += `date=${filterDate}`;
+        fileName = filterBranch ? `Rekap_Cabang_${filterDate}.xlsx` : `Rekap_Harian_${filterDate}.xlsx`;
+      } else {
+        const year = filterMonth.split('-')[0];
+        const month = parseInt(filterMonth.split('-')[1], 10);
+        url += `month=${month}&year=${year}`;
+        fileName = filterBranch ? `Rekap_Cabang_${year}_${month}.xlsx` : `Rekap_Bulanan_${year}_${month}.xlsx`;
+      }
       if (filterBranch) url += `&branch_id=${filterBranch}`; 
 
       const response = await axios.get(url, {
@@ -98,7 +113,7 @@ export default function LaporanPage() {
       const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', filterBranch ? `Rekap_Cabang_${year}_${month}.xlsx` : `Rekap_Total_HRD_${year}_${month}.xlsx`); 
+      link.setAttribute('download', fileName); 
       document.body.appendChild(link);
       link.click(); 
       link.remove(); 
@@ -163,26 +178,52 @@ export default function LaporanPage() {
         {/* Toolbar: Search & Filters */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between gap-4 print:hidden">
           
-          <div className="relative w-full md:w-96">
+          <div className="relative w-full md:w-80">
             <Search className="absolute left-4 top-3 text-gray-400" size={18} />
             <input 
               type="text" 
-              placeholder="Cari nama karyawan atau status..." 
+              placeholder="Cari nama karyawan..." 
               className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition text-sm font-medium text-gray-800"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="flex gap-3 w-full md:w-auto">
+          <div className="flex flex-wrap gap-3 w-full md:w-auto items-center">
+            
+            {/* TOGGLE HARIAN VS BULANAN */}
+            <div className="flex bg-gray-100 p-1 rounded-xl">
+              <button 
+                onClick={() => setFilterType('daily')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition ${filterType === 'daily' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Harian
+              </button>
+              <button 
+                onClick={() => setFilterType('monthly')}
+                className={`px-4 py-1.5 text-xs font-bold rounded-lg transition ${filterType === 'monthly' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Bulanan
+              </button>
+            </div>
+
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1 rounded-xl flex-1 md:flex-none">
               <Filter size={16} className="text-gray-400" />
-              <input 
-                type="month" 
-                className="bg-transparent border-none outline-none text-sm font-bold text-gray-700 cursor-pointer w-full"
-                value={filterMonth} 
-                onChange={e => setFilterMonth(e.target.value)} 
-              />
+              {filterType === 'daily' ? (
+                <input 
+                  type="date" 
+                  className="bg-transparent border-none outline-none text-sm font-bold text-gray-700 cursor-pointer w-full"
+                  value={filterDate} 
+                  onChange={e => setFilterDate(e.target.value)} 
+                />
+              ) : (
+                <input 
+                  type="month" 
+                  className="bg-transparent border-none outline-none text-sm font-bold text-gray-700 cursor-pointer w-full"
+                  value={filterMonth} 
+                  onChange={e => setFilterMonth(e.target.value)} 
+                />
+              )}
             </div>
             
             <select className="border border-gray-200 bg-gray-50 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 outline-none flex-1 md:flex-none cursor-pointer"

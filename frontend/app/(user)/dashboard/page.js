@@ -21,7 +21,7 @@ export default function Dashboard() {
     const fetchDashboard = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        if (!token) { router.push('/login'); return; }
+        if (!token) { router.push('/'); return; }
 
         const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; // Sesuaikan Ngrok Anda
         const config = { headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true'} };
@@ -47,8 +47,8 @@ export default function Dashboard() {
         if (err.response && (err.response.status === 401 || err.response.status === 403)) {
           localStorage.removeItem('access_token');
           localStorage.removeItem('user_role');
-          localStorage.removeItem('marketing_flexible');
-          router.push('/login');
+          localStorage.removeItem('is_dynamic');
+          router.push('/');
         } else {
           setError("Gagal memuat data dashboard.");
           setLoading(false);

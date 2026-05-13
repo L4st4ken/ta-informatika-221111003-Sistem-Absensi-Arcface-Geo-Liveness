@@ -17,7 +17,7 @@ export default function AnomalyLogs() {
     setLoading(true);
     try {
       const token = localStorage.getItem('access_token');
-      if (!token) return router.push('/login');
+      if (!token) return router.push('/');
 
       const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; // Gunakan Base URL Ngrok/Localhost
 
@@ -32,7 +32,7 @@ export default function AnomalyLogs() {
       setAnomalies(res.data);
     } catch (err) {
       console.error(err);
-      if (err.response?.status === 401 || err.response?.status === 403) router.push('/login');
+      if (err.response?.status === 401 || err.response?.status === 403) router.push('/');
     } finally {
       setLoading(false);
     }

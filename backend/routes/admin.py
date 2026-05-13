@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, current_app, send_file
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, extract
 from database.connection import get_db
-from models.models import User, Branch, AttendanceLog, FaceEmbedding
+from models.models import User, Branch, AttendanceLog, FaceEmbedding, TugasLuar
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from werkzeug.security import generate_password_hash
 from functools import wraps
@@ -105,7 +105,7 @@ def admin_stats():
             
         live_feed.append({
             "nama": log.user.nama_lengkap,
-            "role": "Fleksibel" if log.user.marketing_flexible else "Statis",
+            "role": "Fleksibel" if log.user.is_dynamic else "Statis",
             "tipe": log.attempt_type,
             "jam": (log.timestamp + timedelta(hours=7)).strftime("%H:%M") if log.attempt_type != 'MANUAL' else "-",
             "lokasi": cabang_nama,
@@ -166,7 +166,7 @@ def create_user():
     except Exception as e:
         return jsonify({"error": f"Error AI: {str(e)}"}), 500
 
-    is_flexible = data.get("marketing_flexible", False)
+    is_flexible = data.get("is_dynamic", False)
     user = User(
         nik=data.get("nik"),
         nama_lengkap=data.get("nama_lengkap"),
@@ -174,7 +174,7 @@ def create_user():
         password_hash=generate_password_hash(data.get("password")),
         role=data.get("role", "karyawan"),
         branch_id=None if is_flexible else data.get("branch_id"),
-        marketing_flexible=is_flexible
+        is_dynamic=is_flexible
     )
     
     try:
@@ -205,7 +205,7 @@ def list_users():
         "role": u.role,
         "branch_id": u.branch_id,
         "branch": u.branch.nama_cabang if u.branch else "Fleksibel (Semua Area)",
-        "marketing_flexible": u.marketing_flexible
+        "is_dynamic": u.is_dynamic
     } for u in users]), 200
 
 @admin_bp.route("/users/<int:target_user_id>", methods=["DELETE"])
@@ -256,9 +256,9 @@ def update_user(target_user_id):
     user.role = data.get("role", user.role)
 
     # Logika Cabang & Fleksibilitas
-    is_flexible = data.get("marketing_flexible")
+    is_flexible = data.get("is_dynamic")
     if is_flexible is not None:
-        user.marketing_flexible = is_flexible
+        user.is_dynamic = is_flexible
         user.branch_id = None if is_flexible else data.get("branch_id", user.branch_id)
 
     # 3. Update Password (Opsional: Hanya diupdate jika HRD mengisi kolomnya)
@@ -340,7 +340,7 @@ def list_branches():
     } for b in branches]), 200
 
 # ==========================================
-# 4. REPORTING EXCEL
+# 4. REPORTING EXCEL & TABLE
 # ==========================================
 import pandas as pd
 from io import BytesIO
@@ -348,10 +348,10 @@ import calendar
 from datetime import datetime, timedelta, date
 from sqlalchemy import extract
 from flask import send_file, request, jsonify
-# Pastikan import lain yang dibutuhkan sudah ada...
+from models.models import User, AttendanceLog, TugasLuar # Pastikan import ini ada
 
 # ==========================================
-# 1. API UNTUK TABEL LAPORAN (REPORT)
+# 1. API UNTUK TABEL LAPORAN (REPORT DASHBOARD)
 # ==========================================
 @admin_bp.route('/reports', methods=['GET'])
 @jwt_required()
@@ -360,16 +360,29 @@ def get_reports():
     db = next(get_db())
     sekarang = datetime.utcnow() + timedelta(hours=7)
     
+    # Tangkap Parameter
+    filter_date = request.args.get('date') # Format YYYY-MM-DD
     bulan_target = request.args.get('month', sekarang.month, type=int)
     tahun_target = request.args.get('year', sekarang.year, type=int)
     branch_id = request.args.get('branch_id', type=int)
 
-    # PERBAIKAN 1: Masukkan 'Sakit', 'Izin', 'Cuti' ke dalam filter
     query = db.query(AttendanceLog).filter(
-        extract('month', AttendanceLog.timestamp) == bulan_target,
-        extract('year', AttendanceLog.timestamp) == tahun_target,
         AttendanceLog.status.in_(['Success', 'Sakit', 'Izin', 'Cuti'])
     )
+
+    # Filter Waktu (Harian vs Bulanan)
+    if filter_date:
+        target_date = datetime.strptime(filter_date, "%Y-%m-%d").date()
+        query = query.filter(
+            extract('year', AttendanceLog.timestamp) == target_date.year,
+            extract('month', AttendanceLog.timestamp) == target_date.month,
+            extract('day', AttendanceLog.timestamp) == target_date.day
+        )
+    else:
+        query = query.filter(
+            extract('month', AttendanceLog.timestamp) == bulan_target,
+            extract('year', AttendanceLog.timestamp) == tahun_target
+        )
 
     if branch_id:
         query = query.filter(AttendanceLog.attempted_branch_id == branch_id)
@@ -385,9 +398,9 @@ def get_reports():
         if key not in laporan_harian:
             laporan_harian[key] = {
                 "tanggal": log_date,
-                "nik": log.user.nik,                 
+                "nik": log.user.nik,                
                 "nama_karyawan": log.user.nama_lengkap,
-                "role": "Dinamis" if log.user.marketing_flexible else "Statis",
+                "role": "Dinamis" if log.user.is_dynamic else "Statis",
                 "jabatan": "Karyawan",   
                 "cabang": log.branch.nama_cabang if log.branch else "Bypass Lapangan",
                 "jam_masuk": None, "lat_in": None, "lng_in": None,
@@ -400,7 +413,6 @@ def get_reports():
         lat_val = float(log.latitude_attempt) if log.latitude_attempt else None
         lng_val = float(log.longitude_attempt) if log.longitude_attempt else None
 
-        # PERBAIKAN 2: Alokasikan data berdasarkan tipe absennya
         if log.attempt_type == 'IN':
             laporan_harian[key]["jam_masuk"] = jam_str
             laporan_harian[key]["lat_in"] = lat_val
@@ -410,10 +422,9 @@ def get_reports():
             laporan_harian[key]["lat_out"] = lat_val
             laporan_harian[key]["lng_out"] = lng_val
         elif log.attempt_type == 'MANUAL':
-            # Jika manual, timpa statusnya menjadi Sakit/Izin/Cuti
             laporan_harian[key]["status_kehadiran"] = log.status
             laporan_harian[key]["keterangan_hrd"] = log.keterangan_hrd
-            laporan_harian[key]["jam_masuk"] = "-" # Kosongkan karena tidak ada jam fisik
+            laporan_harian[key]["jam_masuk"] = "-" 
             laporan_harian[key]["jam_pulang"] = "-"
 
     hasil_akhir = list(laporan_harian.values())
@@ -421,6 +432,9 @@ def get_reports():
 
     return jsonify(hasil_akhir), 200
 
+# ==========================================
+# 2. API UNTUK DOWNLOAD EXCEL (HARIAN / BULANAN)
+# ==========================================
 @admin_bp.route('/export/attendance', methods=['GET'])
 @jwt_required()
 @admin_required
@@ -428,84 +442,141 @@ def export_attendance():
     db = next(get_db())
     sekarang = datetime.utcnow() + timedelta(hours=7)
     
+    filter_date = request.args.get('date') # Parameter Harian
     bulan_target = request.args.get('month', sekarang.month, type=int)
     tahun_target = request.args.get('year', sekarang.year, type=int)
     branch_id = request.args.get('branch_id', type=int)
 
-    _, num_days = calendar.monthrange(tahun_target, bulan_target)
-    
     user_query = db.query(User).filter(User.role == 'karyawan')
     if branch_id:
         user_query = user_query.filter(User.branch_id == branch_id)
     all_users = user_query.all()
-    
-    log_query = db.query(AttendanceLog).filter(
-        extract('month', AttendanceLog.timestamp) == bulan_target,
-        extract('year', AttendanceLog.timestamp) == tahun_target,
-        AttendanceLog.status.in_(['Success', 'Sakit', 'Izin', 'Cuti'])
-    )
-    if branch_id:
-        log_query = log_query.filter(AttendanceLog.attempted_branch_id == branch_id)
-    logs = log_query.all()
-
-    logs_dict = {}
-    for log in logs:
-        log_date = (log.timestamp + timedelta(hours=7)).date()
-        key = (log.user_id, log_date.day)
-        
-        # PERBAIKAN 3: Tambahkan wadah 'MANUAL_STATUS' di dictionary
-        if key not in logs_dict: 
-            logs_dict[key] = {'IN': None, 'OUT': None, 'MANUAL_STATUS': None}
-            
-        log_time = (log.timestamp + timedelta(hours=7)).strftime("%H:%M")
-        
-        if log.attempt_type == 'IN' and not logs_dict[key]['IN']: 
-            logs_dict[key]['IN'] = log_time
-        elif log.attempt_type == 'OUT': 
-            logs_dict[key]['OUT'] = log_time
-        elif log.attempt_type == 'MANUAL':
-            logs_dict[key]['MANUAL_STATUS'] = log.status.upper()
 
     data_excel = []
-    for user in all_users:
-        row_data = {
-            "NIK": user.nik,
-            "Nama Karyawan": user.nama_lengkap, 
-            "Jabatan": "Karyawan",
-            "Mode Kerja": "Dinamis" if user.marketing_flexible else "Statis"
-        }
-        t_hadir = 0; t_alpha = 0
+
+    # ====================================================
+    # SKENARIO 1: EKSPOR HARIAN
+    # ====================================================
+    if filter_date:
+        target_date = datetime.strptime(filter_date, "%Y-%m-%d").date()
         
-        for day in range(1, num_days + 1):
-            curr = date(tahun_target, bulan_target, day)
-            key = (user.user_id, day)
+        log_query = db.query(AttendanceLog).filter(
+            extract('year', AttendanceLog.timestamp) == target_date.year,
+            extract('month', AttendanceLog.timestamp) == target_date.month,
+            extract('day', AttendanceLog.timestamp) == target_date.day,
+            AttendanceLog.status.in_(['Success', 'Sakit', 'Izin', 'Cuti'])
+        )
+        if branch_id:
+            log_query = log_query.filter(AttendanceLog.attempted_branch_id == branch_id)
+        logs_hari_ini = log_query.all()
+        
+        tugas_query = db.query(TugasLuar).filter(
+            TugasLuar.tanggal_mulai <= target_date,
+            TugasLuar.tanggal_selesai >= target_date
+        ).all()
+        tugas_dict = {t.user_id: t.keterangan for t in tugas_query}
+
+        for user in all_users:
+            user_logs = [l for l in logs_hari_ini if l.user_id == user.user_id]
+            log_in = next((l for l in user_logs if l.attempt_type == 'IN'), None)
+            log_out = next((l for l in user_logs if l.attempt_type == 'OUT'), None)
+            manual_log = next((l for l in user_logs if l.attempt_type == 'MANUAL'), None)
             
-            if key in logs_dict:
-                # PERBAIKAN 4: Cek apakah hari ini ada status manual
-                if logs_dict[key]['MANUAL_STATUS']:
-                    # Tulis SAKIT / IZIN / CUTI (Tidak masuk hitungan Hadir/Alpha)
-                    row_data[f"Tgl {day}"] = logs_dict[key]['MANUAL_STATUS']
-                else:
-                    # Jika normal, tulis IN/OUT
-                    row_data[f"Tgl {day}"] = f"IN: {logs_dict[key]['IN'] or '-'} | OUT: {logs_dict[key]['OUT'] or '-'}"
-                    t_hadir += 1
-            else:
-                row_data[f"Tgl {day}"] = "Libur" if curr.weekday() >= 6 else "Alpha"
-                if curr.weekday() < 6 and curr <= sekarang.date(): t_alpha += 1
+            status_kehadiran = "Alpha"
+            if log_in: status_kehadiran = "Hadir"
+            if user.user_id in tugas_dict: status_kehadiran = "Dinas Luar"
+            if manual_log: status_kehadiran = manual_log.status
+
+            laporan_teks = "-"
+            if user.user_id in tugas_dict:
+                laporan_teks = f"Tugas: {tugas_dict[user.user_id]}"
+            elif log_out and log_out.laporan_kegiatan:
+                laporan_teks = log_out.laporan_kegiatan
+
+            data_excel.append({
+                "NIK": user.nik,
+                "Nama Karyawan": user.nama_lengkap,
+                "Lokasi Cabang": user.branch.nama_cabang if user.branch else "Dinamis",
+                "Status": status_kehadiran,
+                "Jam Masuk": (log_in.timestamp + timedelta(hours=7)).strftime("%H:%M") if log_in else "-",
+                "Jam Pulang": (log_out.timestamp + timedelta(hours=7)).strftime("%H:%M") if log_out else "-",
+                "Keterangan / Laporan Akhir": laporan_teks
+            })
+            
+        nama_file = f"Rekap_Harian_{filter_date}.xlsx"
+        sheet_name = 'Harian'
+
+    # ====================================================
+    # SKENARIO 2: EKSPOR BULANAN
+    # ====================================================
+    else:
+        _, num_days = calendar.monthrange(tahun_target, bulan_target)
         
-        row_data["Total Hadir"] = t_hadir
-        row_data["Total Alpha"] = t_alpha
-        data_excel.append(row_data)
+        log_query = db.query(AttendanceLog).filter(
+            extract('month', AttendanceLog.timestamp) == bulan_target,
+            extract('year', AttendanceLog.timestamp) == tahun_target,
+            AttendanceLog.status.in_(['Success', 'Sakit', 'Izin', 'Cuti'])
+        )
+        if branch_id:
+            log_query = log_query.filter(AttendanceLog.attempted_branch_id == branch_id)
+        logs = log_query.all()
+
+        logs_dict = {}
+        for log in logs:
+            log_date = (log.timestamp + timedelta(hours=7)).date()
+            key = (log.user_id, log_date.day)
+            
+            if key not in logs_dict: 
+                logs_dict[key] = {'IN': None, 'OUT': None, 'MANUAL_STATUS': None}
+                
+            log_time = (log.timestamp + timedelta(hours=7)).strftime("%H:%M")
+            
+            if log.attempt_type == 'IN' and not logs_dict[key]['IN']: 
+                logs_dict[key]['IN'] = log_time
+            elif log.attempt_type == 'OUT': 
+                logs_dict[key]['OUT'] = log_time
+            elif log.attempt_type == 'MANUAL':
+                logs_dict[key]['MANUAL_STATUS'] = log.status.upper()
+
+        for user in all_users:
+            row_data = {
+                "NIK": user.nik,
+                "Nama Karyawan": user.nama_lengkap, 
+                "Jabatan": "Karyawan",
+                "Mode Kerja": "Dinamis" if user.is_dynamic else "Statis"
+            }
+            t_hadir = 0; t_alpha = 0
+            
+            for day in range(1, num_days + 1):
+                curr = date(tahun_target, bulan_target, day)
+                key = (user.user_id, day)
+                
+                if key in logs_dict:
+                    if logs_dict[key]['MANUAL_STATUS']:
+                        row_data[f"Tgl {day}"] = logs_dict[key]['MANUAL_STATUS']
+                    else:
+                        row_data[f"Tgl {day}"] = f"IN: {logs_dict[key]['IN'] or '-'} | OUT: {logs_dict[key]['OUT'] or '-'}"
+                        t_hadir += 1
+                else:
+                    row_data[f"Tgl {day}"] = "Libur" if curr.weekday() >= 6 else "Alpha"
+                    if curr.weekday() < 6 and curr <= sekarang.date(): t_alpha += 1
+            
+            row_data["Total Hadir"] = t_hadir
+            row_data["Total Alpha"] = t_alpha
+            data_excel.append(row_data)
+
+        nama_file = f"Rekap_Bulanan_{tahun_target}_{bulan_target}.xlsx"
+        sheet_name = 'Bulanan'
+
+    # GENERATE EXCEL
+    if branch_id:
+        nama_file = f"Cabang_{branch_id}_" + nama_file
 
     df = pd.DataFrame(data_excel)
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Rekap')
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
     output.seek(0)
-    
-    nama_file = f"Rekap_{tahun_target}_{bulan_target}.xlsx"
-    if branch_id:
-        nama_file = f"Rekap_Cabang_{branch_id}_{tahun_target}_{bulan_target}.xlsx"
         
     return send_file(
         output, 
@@ -604,3 +675,198 @@ def get_anomalies():
         })
         
     return jsonify(res), 200
+
+# ==========================================
+# 6. MANAJEMEN TUGAS LUAR (DISPENSASI GEOFENCE)
+# ==========================================
+
+@admin_bp.route("/tugas-luar", methods=["POST"])
+@jwt_required()
+@admin_required
+def create_tugas_luar():
+    db: Session = next(get_db())
+    data = request.json
+
+    user_id = data.get("user_id")
+    tanggal_mulai = data.get("tanggal_mulai")
+    tanggal_selesai = data.get("tanggal_selesai")
+    keterangan = data.get("keterangan", "")
+
+    if not all([user_id, tanggal_mulai, tanggal_selesai]):
+        return jsonify({"error": "Data user dan rentang tanggal wajib diisi."}), 400
+
+    try:
+        # Konversi string YYYY-MM-DD ke objek Date Python
+        tgl_mulai_obj = datetime.strptime(tanggal_mulai, "%Y-%m-%d").date()
+        tgl_selesai_obj = datetime.strptime(tanggal_selesai, "%Y-%m-%d").date()
+
+        if tgl_selesai_obj < tgl_mulai_obj:
+            return jsonify({"error": "Tanggal selesai tidak boleh lebih awal dari tanggal mulai."}), 400
+
+        # Cek apakah karyawan berstatus statis (Karena yang dinamis tidak butuh surat tugas ini)
+        user = db.query(User).filter_by(user_id=user_id).first()
+        if user.is_dynamic:
+            return jsonify({"error": "Karyawan ini sudah berstatus Dinamis (Bypass GPS Permanen). Tidak perlu surat tugas."}), 400
+
+        # Cek apakah sudah ada tugas luar yang bertabrakan (Overlap) di tanggal tersebut
+        overlap = db.query(TugasLuar).filter(
+            TugasLuar.user_id == user_id,
+            TugasLuar.tanggal_mulai <= tgl_selesai_obj,
+            TugasLuar.tanggal_selesai >= tgl_mulai_obj
+        ).first()
+
+        if overlap:
+            return jsonify({"error": "Karyawan ini sudah memiliki jadwal tugas luar di rentang tanggal tersebut."}), 400
+
+        # Simpan ke Database
+        tugas_baru = TugasLuar(
+            user_id=user_id,
+            tanggal_mulai=tgl_mulai_obj,
+            tanggal_selesai=tgl_selesai_obj,
+            keterangan=keterangan
+        )
+        db.add(tugas_baru)
+        db.commit()
+
+        return jsonify({"msg": "Jadwal Tugas Luar berhasil ditambahkan!"}), 201
+
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": f"Kesalahan server: {str(e)}"}), 500
+
+
+@admin_bp.route("/tugas-luar", methods=["GET"])
+@jwt_required()
+@admin_required
+def get_tugas_luar():
+    db: Session = next(get_db())
+    # Tampilkan jadwal yang masih aktif atau akan datang saja (opsional, tapi bagus untuk UI)
+    sekarang_wib = (datetime.utcnow() + timedelta(hours=7)).date()
+    
+    tugas_list = db.query(TugasLuar).join(User).order_by(desc(TugasLuar.tanggal_selesai)).all()
+    
+    hasil = []
+    for t in tugas_list:
+        status_aktif = "Selesai"
+        if t.tanggal_mulai <= sekarang_wib <= t.tanggal_selesai:
+            status_aktif = "Sedang Berjalan"
+        elif t.tanggal_mulai > sekarang_wib:
+            status_aktif = "Akan Datang"
+
+        hasil.append({
+            "tugas_id": t.tugas_id,
+            "nama_karyawan": t.user.nama_lengkap,
+            "tanggal_mulai": t.tanggal_mulai.strftime("%Y-%m-%d"),
+            "tanggal_selesai": t.tanggal_selesai.strftime("%Y-%m-%d"),
+            "keterangan": t.keterangan,
+            "status": status_aktif
+        })
+
+    return jsonify(hasil), 200
+
+
+@admin_bp.route("/tugas-luar/<int:tugas_id>", methods=["DELETE"])
+@jwt_required()
+@admin_required
+def delete_tugas_luar(tugas_id):
+    db: Session = next(get_db())
+    tugas = db.query(TugasLuar).filter_by(tugas_id=tugas_id).first()
+    
+    if not tugas:
+        return jsonify({"error": "Data tugas luar tidak ditemukan."}), 404
+
+    try:
+        db.delete(tugas)
+        db.commit()
+        return jsonify({"msg": "Data tugas luar berhasil dibatalkan/dihapus."}), 200
+    except Exception as e:
+        db.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+# ==========================================
+# 7. MONITORING & AUDIT AI (DAILY/MONTHLY/YEARLY)
+# ==========================================
+
+@admin_bp.route("/monitoring", methods=["GET"])
+@jwt_required()
+@admin_required
+def get_monitoring():
+    db: Session = next(get_db())
+    
+    # 1. Tangkap Filter
+    filter_date = request.args.get("date") # Format: YYYY-MM-DD
+    filter_month = request.args.get("month", type=int)
+    filter_year = request.args.get("year", type=int)
+    branch_id = request.args.get("branch_id", type=int)
+    search_q = request.args.get("q", "")
+
+    # 2. Base Query untuk User (Semua Karyawan)
+    user_query = db.query(User).filter(User.role == 'karyawan')
+    
+    if branch_id:
+        user_query = user_query.filter(User.branch_id == branch_id)
+    if search_q:
+        user_query = user_query.filter(
+            (User.nama_lengkap.ilike(f"%{search_q}%")) | 
+            (User.nik.ilike(f"%{search_q}%"))
+        )
+    
+    all_users = user_query.all()
+
+    # 3. Query Logs & Tugas Luar berdasarkan waktu
+    # Kita fokus ke filter harian/tanggal tertentu jika ada
+    target_date = datetime.strptime(filter_date, "%Y-%m-%d").date() if filter_date else (datetime.utcnow() + timedelta(hours=7)).date()
+
+    hasil_monitoring = []
+
+    for u in all_users:
+        # Cari Log Masuk (IN) & Pulang (OUT) untuk user ini di tanggal tersebut
+        # Gunakan status 'Success' agar tahu dia benar-benar hadir
+        logs_today = db.query(AttendanceLog).filter(
+            AttendanceLog.user_id == u.user_id,
+            extract('year', AttendanceLog.timestamp) == target_date.year,
+            extract('month', AttendanceLog.timestamp) == target_date.month,
+            extract('day', AttendanceLog.timestamp) == target_date.day,
+            AttendanceLog.status == 'Success'
+        ).all()
+
+        log_in = next((l for l in logs_today if l.attempt_type == 'IN'), None)
+        log_out = next((l for l in logs_today if l.attempt_type == 'OUT'), None)
+
+        # Cek apakah sedang Dinas Luar (Tugas Luar)
+        tugas_aktif = db.query(TugasLuar).filter(
+            TugasLuar.user_id == u.user_id,
+            TugasLuar.tanggal_mulai <= target_date,
+            TugasLuar.tanggal_selesai >= target_date
+        ).first()
+
+        # Cek Izin Manual (Sakit/Izin/Cuti)
+        izin_manual = db.query(AttendanceLog).filter(
+            AttendanceLog.user_id == u.user_id,
+            extract('year', AttendanceLog.timestamp) == target_date.year,
+            extract('month', AttendanceLog.timestamp) == target_date.month,
+            extract('day', AttendanceLog.timestamp) == target_date.day,
+            AttendanceLog.status.in_(['Sakit', 'Izin', 'Cuti'])
+        ).first()
+
+        # Menentukan Status Akhir
+        status_display = "Belum Hadir"
+        if log_in: status_display = "Hadir"
+        if tugas_aktif: status_display = "Dinas Luar"
+        if izin_manual: status_display = izin_manual.status
+
+        hasil_monitoring.append({
+            "user_id": u.user_id,
+            "nik": u.nik,
+            "nama": u.nama_lengkap,
+            "cabang": u.branch.nama_cabang if u.branch else "Fleksibel",
+            "jam_masuk": (log_in.timestamp + timedelta(hours=7)).strftime("%H:%M") if log_in else "-",
+            "jam_pulang": (log_out.timestamp + timedelta(hours=7)).strftime("%H:%M") if log_out else "-",
+            "status": status_display,
+            # METRIK AI (AMBIL DARI ABSEN MASUK)
+            "ai_accuracy": round(log_in.similarity_score * 100, 1) if log_in and log_in.similarity_score else None,
+            "is_live": log_in.is_live if log_in else None,
+            "jarak": round(log_in.distance_meters) if log_in and log_in.distance_meters else None
+        })
+
+    return jsonify(hasil_monitoring), 200

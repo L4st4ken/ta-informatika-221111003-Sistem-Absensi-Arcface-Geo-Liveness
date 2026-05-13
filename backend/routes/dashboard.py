@@ -40,7 +40,7 @@ def get_summary():
         action_status = 'OUT' # Jika terakhir masuk, berarti sekarang waktunya pulang
 
     # 3. AMBIL NAMA CABANG / STATUS FLEKSIBEL
-    nama_cabang = "Dinas Luar / Bypass" if user.marketing_flexible else (user.branch.nama_cabang if user.branch else "Belum Diatur")
+    nama_cabang = "Dinas Luar / Bypass" if user.is_dynamic else (user.branch.nama_cabang if user.branch else "Belum Diatur")
 
     # 4. STATISTIK BULAN INI (Sederhana & Cepat)
     tahun = today.year
@@ -82,7 +82,7 @@ def get_summary():
             "email": user.email,
             "role": user.role,
             "cabang": nama_cabang,
-            "tipe_mobilitas": "Dinamis" if user.marketing_flexible else "Statis"
+            "tipe_mobilitas": "Dinamis" if user.is_dynamic else "Statis"
         },
         "stats": {
             "total_hadir": total_hadir,

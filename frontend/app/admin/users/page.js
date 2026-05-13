@@ -24,7 +24,7 @@ export default function UserManagement() {
     email: '',
     password: '',
     role: 'karyawan',
-    marketing_flexible: false,
+    is_dynamic: false,
     branch_id: '',
     image_base64: ''
   });
@@ -154,7 +154,7 @@ export default function UserManagement() {
       const payload = { ...formData };
       
       // Bypass branch jika fleksibel
-      if (payload.marketing_flexible) payload.branch_id = null;
+      if (payload.is_dynamic) payload.branch_id = null;
       else if (!payload.branch_id) payload.branch_id = branches.length > 0 ? branches[0].branch_id : null;
 
       const headers = { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' };
@@ -200,7 +200,7 @@ export default function UserManagement() {
     setFormData({ 
       nik: '',
       nama_lengkap: '', email: '', password: '', role: 'karyawan', 
-      marketing_flexible: false, branch_id: branches.length > 0 ? branches[0].branch_id : '', 
+      is_dynamic: false, branch_id: branches.length > 0 ? branches[0].branch_id : '', 
       image_base64: '' 
     });
     setShowModal(true);
@@ -214,7 +214,7 @@ export default function UserManagement() {
       email: user.email,
       password: '', // Kosongkan, HRD tidak perlu tahu password lama
       role: user.role,
-      marketing_flexible: user.marketing_flexible,
+      is_dynamic: user.is_dynamic,
       branch_id: user.branch_id || (branches.length > 0 ? branches[0].branch_id : ''),
       image_base64: '' // Kosongkan, kamera disembunyikan sampai HRD mau foto ulang
     });
@@ -289,13 +289,13 @@ export default function UserManagement() {
                       </td>
                       <td className="p-5 text-center">
                         <span className={`px-3 py-1 rounded text-xs font-bold ${
-                          user.marketing_flexible ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'
+                          user.is_dynamic ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {user.marketing_flexible ? 'DINAMIS (Bypass GPS)' : 'STATIS (Terikat GPS)'}
+                          {user.is_dynamic ? 'DINAMIS (Bypass GPS)' : 'STATIS (Terikat GPS)'}
                         </span>
                       </td>
                       <td className="p-5 font-medium text-gray-700">
-                        {user.marketing_flexible ? (
+                        {user.is_dynamic ? (
                            <span className="text-indigo-500 italic text-xs">Seluruh Area</span>
                         ) : (
                           <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500"></div> {user.branch}</span>
@@ -463,32 +463,32 @@ export default function UserManagement() {
                   {/* Desain Toggle Switch On/Off */}
                   <div 
                     className="flex items-center justify-between mb-4 cursor-pointer group"
-                    onClick={() => setFormData({...formData, marketing_flexible: !formData.marketing_flexible})}
+                    onClick={() => setFormData({...formData, is_dynamic: !formData.is_dynamic})}
                   >
                     <div>
                       <span className="font-bold text-gray-800 text-sm block">Mode Dinamis (Bypass Geofencing)</span>
                       <span className="text-xs text-gray-500 font-medium mt-0.5 block">
-                        Aktifkan untuk Kurir / Marketing yang bekerja mobile.
+                        Aktifkan untuk pegawai dengan mobilitas kerja tinggi yang tidak diwajibkan berada dalam area geofence tertentu.
                       </span>
                     </div>
                     
                     {/* Komponen Toggle Tailwind Murni */}
                     <div className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none ${
-                      formData.marketing_flexible ? 'bg-indigo-600' : 'bg-gray-200'
+                      formData.is_dynamic ? 'bg-indigo-600' : 'bg-gray-200'
                     }`}>
                       <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out ${
-                        formData.marketing_flexible ? 'translate-x-8' : 'translate-x-1'
+                        formData.is_dynamic ? 'translate-x-8' : 'translate-x-1'
                       }`} />
                     </div>
                   </div>
 
                   {/* Efek Transisi untuk Dropdown Cabang */}
                   <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                    formData.marketing_flexible ? 'max-h-0 opacity-0' : 'max-h-24 opacity-100 mt-4 border-t border-gray-100 pt-4'
+                    formData.is_dynamic ? 'max-h-0 opacity-0' : 'max-h-24 opacity-100 mt-4 border-t border-gray-100 pt-4'
                   }`}>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Pilih Cabang Penempatan</label>
                     <select 
-                      required={!formData.marketing_flexible} 
+                      required={!formData.is_dynamic} 
                       className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm font-bold"
                       value={formData.branch_id} 
                       onChange={e => setFormData({...formData, branch_id: e.target.value})}
