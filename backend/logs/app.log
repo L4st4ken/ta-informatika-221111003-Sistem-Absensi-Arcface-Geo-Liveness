@@ -341,3 +341,31 @@
 [2026-05-15 19:57:34,187] INFO in app: Registered blueprint: admin_bp -> /admin
 [2026-05-15 19:57:34,282] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
 [2026-05-15 19:57:34,361] INFO in app: Registered blueprint: branches_bp -> /branches
+[2026-05-15 20:09:03,633] INFO in app: OK Logging initialized.
+[2026-05-15 20:09:03,734] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-05-15 20:09:03,766] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-05-15 20:09:03,846] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-05-15 20:09:03,923] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-05-15 20:09:04,001] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-05-15 20:09:04,077] INFO in app: Registered blueprint: branches_bp -> /branches
+[2026-05-15 20:09:08,041] INFO in app: OK Logging initialized.
+[2026-05-15 20:09:08,113] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-05-15 20:09:08,131] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-05-15 20:09:08,170] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-05-15 20:09:08,268] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-05-15 20:09:08,355] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-05-15 20:09:08,440] INFO in app: Registered blueprint: branches_bp -> /branches
+[2026-05-15 20:09:18,356] INFO in app: OK Logging initialized.
+[2026-05-15 20:09:18,422] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-05-15 20:09:18,458] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-05-15 20:09:18,526] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-05-15 20:09:18,620] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-05-15 20:09:18,698] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-05-15 20:09:18,776] INFO in app: Registered blueprint: branches_bp -> /branches
+[2026-05-15 20:09:22,246] INFO in app: OK Logging initialized.
+[2026-05-15 20:09:22,324] INFO in app: OK Database tables ensured (Base.metadata.create_all).
+[2026-05-15 20:09:22,369] INFO in app: Registered blueprint: auth_bp -> /auth
+[2026-05-15 20:09:22,442] INFO in app: Registered blueprint: attendance_bp -> /attendance
+[2026-05-15 20:09:22,522] INFO in app: Registered blueprint: admin_bp -> /admin
+[2026-05-15 20:09:22,601] INFO in app: Registered blueprint: dashboard_bp -> /dashboard
+[2026-05-15 20:09:22,682] INFO in app: Registered blueprint: branches_bp -> /branches
