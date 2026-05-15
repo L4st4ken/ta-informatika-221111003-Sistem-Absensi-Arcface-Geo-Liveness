@@ -1,0 +1,27 @@
+Flask==2.3.3
+Flask-Cors==4.0.0
+Flask-JWT-Extended==4.6.0
+
+SQLAlchemy==2.0.23
+PyMySQL==1.1.0
+greenlet==3.2.4
+
+python-dotenv==1.0.1
+
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+Pillow==10.1.0
+
+insightface @ file:///D:/Belajar%20VSCODe/arcface-absensi-backend/insightface-0.7.3-cp312-cp312-win_amd64.whl
+
+onnxruntime==1.23.2
+
+geopy==2.4.1
+geographiclib==2.1
+
+requests==2.31.0
+
+pandas
+openpyxl
+
+Werkzeug==3.1.4

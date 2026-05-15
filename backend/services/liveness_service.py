@@ -10,10 +10,8 @@ import insightface
 # ==========================================
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
-FAS_DIR = os.path.join(BASE_DIR, "Silent-Face-Anti-Spoofing")
-sys.path.append(FAS_DIR)
 
-from src.generate_patches import CropImage
+from utils.generate_patches import CropImage
 
 class LivenessService:
     def __init__(self):
