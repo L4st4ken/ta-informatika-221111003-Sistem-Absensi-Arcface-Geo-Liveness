@@ -154,8 +154,9 @@ export default function UserManagement() {
       const payload = { ...formData };
       
       // Bypass branch jika fleksibel
-      if (payload.is_dynamic) payload.branch_id = null;
-      else if (!payload.branch_id) payload.branch_id = branches.length > 0 ? branches[0].branch_id : null;
+      if (!payload.branch_id && branches.length > 0) {
+        payload.branch_id = branches[0].branch_id;
+      }
 
       const headers = { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' };
 
@@ -291,16 +292,17 @@ export default function UserManagement() {
                         <span className={`px-3 py-1 rounded text-xs font-bold ${
                           user.is_dynamic ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'
                         }`}>
-                          {user.is_dynamic ? 'DINAMIS (Bypass GPS)' : 'STATIS (Terikat GPS)'}
+                          {user.is_dynamic ? 'DINAMIS' : 'STATIS'}
                         </span>
                       </td>
+
                       <td className="p-5 font-medium text-gray-700">
-                        {user.is_dynamic ? (
-                           <span className="text-indigo-500 italic text-xs">Seluruh Area</span>
-                        ) : (
-                          <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500"></div> {user.branch}</span>
-                        )}
+                        <span className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${user.is_dynamic ? 'bg-indigo-500' : 'bg-green-500'}`}></div> 
+                          {user.branch || "Belum ada Cabang"}
+                        </span>
                       </td>
+                      
                       <td className="p-5">
                         <div className="flex justify-center gap-2">
                           <button onClick={() => openEditModal(user)} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition" title="Edit Data">
@@ -468,12 +470,12 @@ export default function UserManagement() {
                     <div>
                       <span className="font-bold text-gray-800 text-sm block">Mode Dinamis (Bypass Geofencing)</span>
                       <span className="text-xs text-gray-500 font-medium mt-0.5 block">
-                        Aktifkan untuk pegawai dengan mobilitas kerja tinggi yang tidak diwajibkan berada dalam area geofence tertentu.
+                        Aktifkan untuk pegawai dengan mobilitas kerja tinggi di lapangan. Karyawan tetap terikat pada Cabang Utama secara administratif.
                       </span>
                     </div>
                     
                     {/* Komponen Toggle Tailwind Murni */}
-                    <div className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none ${
+                    <div className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300 ease-in-out focus:outline-none shrink-0 ml-4 ${
                       formData.is_dynamic ? 'bg-indigo-600' : 'bg-gray-200'
                     }`}>
                       <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-300 ease-in-out ${
@@ -482,13 +484,13 @@ export default function UserManagement() {
                     </div>
                   </div>
 
-                  {/* Efek Transisi untuk Dropdown Cabang */}
-                  <div className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                    formData.is_dynamic ? 'max-h-0 opacity-0' : 'max-h-24 opacity-100 mt-4 border-t border-gray-100 pt-4'
-                  }`}>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Pilih Cabang Penempatan</label>
+                  {/* Dropdown Cabang (SEKARANG SELALU MUNCUL & WAJIB) */}
+                  <div className="mt-4 border-t border-gray-100 pt-4">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                      Pilih Cabang Utama (Home Base) <span className="text-red-500">*</span>
+                    </label>
                     <select 
-                      required={!formData.is_dynamic} 
+                      required 
                       className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-500 text-black text-sm font-bold"
                       value={formData.branch_id} 
                       onChange={e => setFormData({...formData, branch_id: e.target.value})}

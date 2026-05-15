@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Search, Calendar, MapPin, CheckCircle, XCircle, Plane, Activity } from 'lucide-react';
+import { ArrowLeft, Search, Calendar, MapPin, CheckCircle, XCircle, Plane, Activity, ClipboardEdit, Users, UserCheck, AlertTriangle, FileText } from 'lucide-react';
 
 export default function MonitoringPage() {
   const router = useRouter();
@@ -41,6 +41,11 @@ export default function MonitoringPage() {
   useEffect(() => {
     fetchMonitoring();
   }, [fetchMonitoring]);
+
+  const statTotal = data.length;
+  const statHadir = data.filter(r => r.status === 'Hadir' || r.status === 'Dinas Luar').length;
+  const statIzin = data.filter(r => ['Sakit', 'Izin', 'Cuti'].includes(r.status)).length;
+  const statBelum = data.filter(r => r.status === 'Belum Hadir').length;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -85,6 +90,40 @@ export default function MonitoringPage() {
           </div>
         </div>
 
+        {/* === KARTU STATISTIK DINAMIS === */}
+        {!loading && data.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-full"><Users size={20}/></div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Karyawan</p>
+                <p className="text-2xl font-black text-gray-800">{statTotal}</p>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+              <div className="p-3 bg-green-50 text-green-600 rounded-full"><UserCheck size={20}/></div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hadir / Dinas</p>
+                <p className="text-2xl font-black text-gray-800">{statHadir}</p>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+              <div className="p-3 bg-red-50 text-red-600 rounded-full"><AlertTriangle size={20}/></div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Belum Hadir</p>
+                <p className="text-2xl font-black text-gray-800">{statBelum}</p>
+              </div>
+            </div>
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+              <div className="p-3 bg-purple-50 text-purple-600 rounded-full"><FileText size={20}/></div>
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sakit / Izin</p>
+                <p className="text-2xl font-black text-gray-800">{statIzin}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabel Monitoring */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
@@ -117,6 +156,16 @@ export default function MonitoringPage() {
                         }`}>
                           {row.status}
                         </span>
+
+                        {row.catatan && (
+                          <div 
+                            className="mt-2 mx-auto flex items-center justify-center gap-1 text-[9px] text-gray-500 bg-gray-50 px-2 py-1.5 rounded border border-gray-100 max-w-[120px] cursor-help"
+                            title={row.catatan}
+                          >
+                            <ClipboardEdit size={10} className="flex-shrink-0 text-indigo-400" />
+                            <span className="truncate italic">&quot;{row.catatan}&quot;</span>
+                          </div>
+                        )}
                       </td>
                       <td className="p-5 text-center font-mono font-bold text-gray-600">
                         {row.jam_masuk} <span className="text-gray-300 mx-1">/</span> {row.jam_pulang}

@@ -58,15 +58,19 @@ def admin_stats():
     sekarang_wib = datetime.utcnow() + timedelta(hours=7)
     today_date = sekarang_wib.date()
 
+    start_wib = datetime.combine(today_date, datetime.min.time())
+    end_wib = datetime.combine(today_date, datetime.max.time())
+    start_utc = start_wib - timedelta(hours=7)
+    end_utc = end_wib - timedelta(hours=7)
+
     # 1. Hitung Statistik
     total_karyawan = db.query(User).filter(User.role == 'karyawan').count()
     
     hadir_today = db.query(AttendanceLog.user_id).filter(
-        extract('year', AttendanceLog.timestamp) == today_date.year,
-        extract('month', AttendanceLog.timestamp) == today_date.month,
-        extract('day', AttendanceLog.timestamp) == today_date.day,
-        AttendanceLog.attempt_type == 'IN',
-        AttendanceLog.status == 'Success'
+        AttendanceLog.timestamp >= start_utc,
+        AttendanceLog.timestamp <= end_utc,
+        AttendanceLog.status == 'Success',
+        AttendanceLog.attempt_type == 'IN'
     ).distinct().count()
 
     # Tambahan: Hitung yang Izin/Sakit/Cuti hari ini agar tidak dihitung Alpha
@@ -173,7 +177,7 @@ def create_user():
         email=data.get("email"),
         password_hash=generate_password_hash(data.get("password")),
         role=data.get("role", "karyawan"),
-        branch_id=None if is_flexible else data.get("branch_id"),
+        branch_id= data.get("branch_id"),
         is_dynamic=is_flexible
     )
     
@@ -256,11 +260,12 @@ def update_user(target_user_id):
     user.role = data.get("role", user.role)
 
     # Logika Cabang & Fleksibilitas
-    is_flexible = data.get("is_dynamic")
-    if is_flexible is not None:
-        user.is_dynamic = is_flexible
-        user.branch_id = None if is_flexible else data.get("branch_id", user.branch_id)
+    if "is_dynamic" in data:
+        user.is_dynamic = data.get("is_dynamic")
 
+    if "branch_id" in data:
+        user.branch_id = data.get("branch_id")
+        
     # 3. Update Password (Opsional: Hanya diupdate jika HRD mengisi kolomnya)
     new_password = data.get("password")
     if new_password:
@@ -417,15 +422,22 @@ def get_reports():
             laporan_harian[key]["jam_masuk"] = jam_str
             laporan_harian[key]["lat_in"] = lat_val
             laporan_harian[key]["lng_in"] = lng_val
+            if log.tugas_id and not laporan_harian[key]["keterangan_hrd"]:
+                laporan_harian[key]["keterangan_hrd"] = f"Tugas Luar: {log.tugas_luar.keterangan}"
         elif log.attempt_type == 'OUT':
             laporan_harian[key]["jam_pulang"] = jam_str
             laporan_harian[key]["lat_out"] = lat_val
             laporan_harian[key]["lng_out"] = lng_val
+            if log.laporan_kegiatan:
+                laporan_harian[key]["keterangan_hrd"] = f"Laporan Pegawai: {log.laporan_kegiatan}"
+            elif log.tugas_id and not laporan_harian[key]["keterangan_hrd"]:
+                laporan_harian[key]["keterangan_hrd"] = f"Tugas Luar: {log.tugas_luar.keterangan}"
         elif log.attempt_type == 'MANUAL':
             laporan_harian[key]["status_kehadiran"] = log.status
-            laporan_harian[key]["keterangan_hrd"] = log.keterangan_hrd
             laporan_harian[key]["jam_masuk"] = "-" 
             laporan_harian[key]["jam_pulang"] = "-"
+            if log.keterangan_hrd:
+                laporan_harian[key]["keterangan_hrd"] = f"Catatan HRD: {log.keterangan_hrd}"
 
     hasil_akhir = list(laporan_harian.values())
     hasil_akhir.sort(key=lambda x: x['tanggal'], reverse=True)
@@ -817,6 +829,12 @@ def get_monitoring():
     # Kita fokus ke filter harian/tanggal tertentu jika ada
     target_date = datetime.strptime(filter_date, "%Y-%m-%d").date() if filter_date else (datetime.utcnow() + timedelta(hours=7)).date()
 
+    start_wib = datetime.combine(target_date, datetime.min.time())
+    end_wib = datetime.combine(target_date, datetime.max.time())
+
+    start_utc = start_wib - timedelta(hours=7)
+    end_utc = end_wib - timedelta(hours=7)
+
     hasil_monitoring = []
 
     for u in all_users:
@@ -824,9 +842,8 @@ def get_monitoring():
         # Gunakan status 'Success' agar tahu dia benar-benar hadir
         logs_today = db.query(AttendanceLog).filter(
             AttendanceLog.user_id == u.user_id,
-            extract('year', AttendanceLog.timestamp) == target_date.year,
-            extract('month', AttendanceLog.timestamp) == target_date.month,
-            extract('day', AttendanceLog.timestamp) == target_date.day,
+            AttendanceLog.timestamp >= start_utc,
+            AttendanceLog.timestamp <= end_utc,
             AttendanceLog.status == 'Success'
         ).all()
 
@@ -843,9 +860,8 @@ def get_monitoring():
         # Cek Izin Manual (Sakit/Izin/Cuti)
         izin_manual = db.query(AttendanceLog).filter(
             AttendanceLog.user_id == u.user_id,
-            extract('year', AttendanceLog.timestamp) == target_date.year,
-            extract('month', AttendanceLog.timestamp) == target_date.month,
-            extract('day', AttendanceLog.timestamp) == target_date.day,
+            AttendanceLog.timestamp >= start_utc,     
+            AttendanceLog.timestamp <= end_utc,       
             AttendanceLog.status.in_(['Sakit', 'Izin', 'Cuti'])
         ).first()
 
@@ -855,6 +871,14 @@ def get_monitoring():
         if tugas_aktif: status_display = "Dinas Luar"
         if izin_manual: status_display = izin_manual.status
 
+        laporan_teks = None
+        if log_out and log_out.laporan_kegiatan:
+            laporan_teks = f"Laporan: {log_out.laporan_kegiatan}"
+        elif tugas_aktif:
+            laporan_teks = f"Tugas Luar: {tugas_aktif.keterangan}"
+        elif izin_manual and izin_manual.keterangan_hrd:
+            laporan_teks = f"HRD: {izin_manual.keterangan_hrd}"
+
         hasil_monitoring.append({
             "user_id": u.user_id,
             "nik": u.nik,
@@ -863,6 +887,7 @@ def get_monitoring():
             "jam_masuk": (log_in.timestamp + timedelta(hours=7)).strftime("%H:%M") if log_in else "-",
             "jam_pulang": (log_out.timestamp + timedelta(hours=7)).strftime("%H:%M") if log_out else "-",
             "status": status_display,
+            "catatan": laporan_teks,
             # METRIK AI (AMBIL DARI ABSEN MASUK)
             "ai_accuracy": round(log_in.similarity_score * 100, 1) if log_in and log_in.similarity_score else None,
             "is_live": log_in.is_live if log_in else None,
