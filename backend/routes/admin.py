@@ -88,6 +88,11 @@ def admin_stats():
     # 3. Base Query
     query = db.query(AttendanceLog).join(User)
 
+    query = query.filter(
+        AttendanceLog.timestamp >= start_utc,
+        AttendanceLog.timestamp <= end_utc
+    )
+
     # 4. Terapkan Filter
     if filter_nama:
         query = query.filter(User.nama_lengkap.ilike(f"%{filter_nama}%"))
