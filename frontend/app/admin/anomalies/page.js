@@ -19,7 +19,7 @@ export default function AnomalyLogs() {
       const token = localStorage.getItem('access_token');
       if (!token) return router.push('/');
 
-      const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; // Gunakan Base URL Ngrok/Localhost
+      const API_URL = process.env.NEXT_PUBLIC_API_URL; // Gunakan Base URL Ngrok/Localhost
 
       // Pecah "YYYY-MM" menjadi year dan month
       const year = filterMonth.split('-')[0];

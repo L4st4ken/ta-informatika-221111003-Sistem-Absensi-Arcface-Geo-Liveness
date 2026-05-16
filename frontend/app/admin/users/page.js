@@ -35,7 +35,7 @@ export default function UserManagement() {
   const fileInputRef = useRef(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
 
-  const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   // --- 1. FETCH DATA (Users & Branches) ---
   const fetchMasterData = useCallback(async () => {
@@ -168,7 +168,7 @@ export default function UserManagement() {
         alert("Data Karyawan berhasil diperbarui!");
 
       }else{
-        await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users', payload, {
+        await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/admin/users`, payload, {
         headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
         alert("Akun Karyawan dan Data Wajah berhasil didaftarkan!");

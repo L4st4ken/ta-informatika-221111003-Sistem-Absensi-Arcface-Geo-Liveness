@@ -26,10 +26,10 @@ export default function LoginPage() {
 
     try {
       // Sesuaikan URL ini dengan port backend Flask Anda (default localhost:5000)
-      const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev/auth/login'; 
+      const API_URL = process.env.NEXT_PUBLIC_API_URL; 
       // Jika pakai Ngrok: 'https://nondeliberately-subordinal-maximina.ngrok-free.dev/auth/login'
       
-      const res = await axios.post(API_URL, formData, {
+      const res = await axios.post(`${API_URL}/auth/login`, formData, {
         headers: { 'ngrok-skip-browser-warning': 'true' }
       });
 

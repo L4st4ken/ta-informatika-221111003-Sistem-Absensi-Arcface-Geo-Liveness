@@ -23,7 +23,7 @@ export default function Dashboard() {
         const token = localStorage.getItem('access_token');
         if (!token) { router.push('/'); return; }
 
-        const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; // Sesuaikan Ngrok Anda
+        const API_URL = process.env.NEXT_PUBLIC_API_URL; // Sesuaikan Ngrok Anda
         const config = { headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true'} };
 
         // PERBAIKAN: Tarik data Dashboard & Status Absen Hari Ini secara bersamaan

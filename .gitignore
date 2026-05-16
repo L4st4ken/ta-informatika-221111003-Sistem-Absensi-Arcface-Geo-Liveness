@@ -1,14 +1,26 @@
-# Python
+# Python (Backend)
 backend/.venv/
 backend/__pycache__/
 backend/*.pyc
+backend/*.pyo
+backend/*.pyd
 backend/.env
 backend/testenv/
+backend/logs/*.log
 
-# Node / Next.js
+# Node / Next.js (Frontend)
 frontend/node_modules/
 frontend/.next/
+frontend/out/
+frontend/build/
+frontend/dist/
+frontend/.env
 frontend/.env.local
+frontend/.env.production.local
+frontend/.env.development.local
 
-# OS
+# OS & IDE
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/

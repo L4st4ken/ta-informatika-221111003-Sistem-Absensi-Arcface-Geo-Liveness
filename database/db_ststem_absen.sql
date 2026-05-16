@@ -1,0 +1,324 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: May 15, 2026 at 04:09 PM
+-- Server version: 10.4.28-MariaDB
+-- PHP Version: 8.2.4
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `db_ststem_absen`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `attendance_logs`
+--
+
+CREATE TABLE `attendance_logs` (
+  `log_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `attempted_branch_id` int(11) DEFAULT NULL,
+  `tugas_id` int(11) DEFAULT NULL,
+  `attempt_type` enum('IN','OUT','MANUAL') NOT NULL,
+  `timestamp` datetime DEFAULT current_timestamp(),
+  `latitude_attempt` decimal(10,8) DEFAULT NULL,
+  `longitude_attempt` decimal(11,8) DEFAULT NULL,
+  `distance_meters` float DEFAULT NULL,
+  `is_live` tinyint(1) DEFAULT NULL,
+  `similarity_score` float DEFAULT NULL,
+  `status` enum('Success','Failed','Sakit','Izin','Cuti') NOT NULL,
+  `keterangan_hrd` varchar(255) DEFAULT NULL,
+  `laporan_kegiatan` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `attendance_logs`
+--
+
+INSERT INTO `attendance_logs` (`log_id`, `user_id`, `attempted_branch_id`, `tugas_id`, `attempt_type`, `timestamp`, `latitude_attempt`, `longitude_attempt`, `distance_meters`, `is_live`, `similarity_score`, `status`, `keterangan_hrd`, `laporan_kegiatan`) VALUES
+(1, 2, 1, NULL, 'IN', '2026-04-04 06:47:39', -7.98576330, 112.67351390, 20.6237, 1, 0.689977, 'Success', NULL, NULL),
+(2, 2, 1, NULL, 'OUT', '2026-04-04 09:21:50', -7.98573590, 112.67352200, 18.812, 1, 0.733206, 'Success', NULL, NULL),
+(3, 5, NULL, NULL, 'IN', '2026-04-05 23:54:33', -7.98567116, 112.67304404, NULL, 1, 0.896042, 'Success', NULL, NULL),
+(4, 5, NULL, NULL, 'IN', '2026-04-05 23:59:34', -7.98563947, 112.67303429, NULL, 1, 0.620111, 'Success', NULL, NULL),
+(5, 5, NULL, NULL, 'IN', '2026-04-06 00:00:05', -7.98561471, 112.67308013, NULL, 0, NULL, 'Failed', NULL, NULL),
+(6, 2, 1, NULL, 'IN', '2026-04-06 00:20:22', -7.98555850, 112.67353170, 15.0528, 1, 0.695989, 'Success', NULL, NULL),
+(7, 5, NULL, NULL, 'IN', '2026-04-06 23:56:19', -7.98559620, 112.67350820, NULL, 1, 0.752913, 'Success', NULL, NULL),
+(8, 5, NULL, NULL, 'OUT', '2026-04-06 23:57:05', -7.98562610, 112.67357310, NULL, 1, 0.704452, 'Success', NULL, 'Bertemu Client'),
+(9, 2, 1, NULL, 'IN', '2026-04-06 23:59:29', -7.98569990, 112.67352840, 16.6688, 0, NULL, 'Failed', NULL, NULL),
+(10, 2, 1, NULL, 'IN', '2026-04-06 23:59:38', -7.98569990, 112.67352840, 16.6688, 0, NULL, 'Failed', NULL, NULL),
+(11, 2, 1, NULL, 'IN', '2026-04-06 23:59:47', -7.98569990, 112.67352840, 16.6688, 0, NULL, 'Failed', NULL, NULL),
+(12, 2, 1, NULL, 'IN', '2026-04-07 00:02:08', -7.98572680, 112.67352140, 18.0356, 1, 0.674702, 'Success', NULL, NULL),
+(13, 2, 1, NULL, 'OUT', '2026-04-07 00:02:33', -7.98568020, 112.67353420, 16.0407, 0, NULL, 'Failed', NULL, ''),
+(14, 2, 1, NULL, 'OUT', '2026-04-07 00:02:41', -7.98568020, 112.67353420, 16.0407, 0, NULL, 'Failed', NULL, ''),
+(15, 2, 1, NULL, 'OUT', '2026-04-07 00:02:46', -7.98568020, 112.67353420, 16.0407, 0, NULL, 'Failed', NULL, ''),
+(16, 2, 1, NULL, 'OUT', '2026-04-07 00:03:02', -7.98568780, 112.67352130, 15.2579, 1, 0.691664, 'Success', NULL, ''),
+(17, 6, NULL, NULL, 'MANUAL', '2026-04-07 01:00:00', NULL, NULL, NULL, NULL, NULL, 'Sakit', 'Sakit Demam, Ada Surat Dokter', NULL),
+(18, 6, 1, NULL, 'IN', '2026-04-07 13:50:37', -7.98561280, 112.67359970, 21.3299, 1, 0.779855, 'Success', NULL, NULL),
+(19, 2, 1, NULL, 'IN', '2026-04-09 09:05:29', -7.98558790, 112.67349070, 9.69507, 1, 0.0840655, 'Failed', NULL, NULL),
+(20, 2, 1, NULL, 'IN', '2026-04-09 09:05:39', -7.98558790, 112.67349070, 9.69507, 1, 0.71241, 'Success', NULL, NULL),
+(21, 7, 1, NULL, 'IN', '2026-04-09 10:55:55', -7.98566500, 112.67353500, 15.3919, 1, 0.727594, 'Success', NULL, NULL),
+(22, 7, 1, NULL, 'OUT', '2026-04-09 10:56:31', -7.98567500, 112.67351000, 13.4422, 1, 0.337322, 'Failed', NULL, ''),
+(23, 7, 1, NULL, 'OUT', '2026-04-09 10:56:57', -7.98567500, 112.67351000, 13.4422, 1, 0.782555, 'Success', NULL, ''),
+(24, 2, 1, NULL, 'OUT', '2026-04-09 10:59:44', -7.98555510, 112.67350750, 12.827, 0, NULL, 'Failed', NULL, ''),
+(25, 2, 1, NULL, 'OUT', '2026-04-09 11:00:05', -7.98555510, 112.67350750, 12.827, 1, 0.598706, 'Success', NULL, ''),
+(26, 2, NULL, NULL, 'MANUAL', '2026-04-10 01:00:00', NULL, NULL, NULL, NULL, NULL, 'Sakit', 'Ada Surat Keterangan Dokter', NULL),
+(27, 5, NULL, NULL, 'IN', '2026-04-10 07:54:33', -7.98560408, 112.67324116, NULL, 1, 0.706022, 'Success', NULL, NULL),
+(28, 5, NULL, NULL, 'OUT', '2026-04-10 07:55:17', -7.98562122, 112.67327862, NULL, 1, 0.67795, 'Success', NULL, 'Sudah Laporan'),
+(29, 5, NULL, NULL, 'MANUAL', '2026-04-12 01:00:00', NULL, NULL, NULL, NULL, NULL, 'Cuti', 'Lebaran', NULL),
+(30, 2, NULL, NULL, 'IN', '2026-05-05 03:39:22', -7.96662280, 112.60758840, NULL, 1, 0.053006, 'Failed', NULL, NULL),
+(31, 2, NULL, NULL, 'IN', '2026-05-05 03:39:31', -7.96662280, 112.60758840, NULL, 0, NULL, 'Failed', NULL, NULL),
+(32, 2, NULL, NULL, 'IN', '2026-05-05 03:39:39', -7.96662280, 112.60758840, NULL, 1, 0.779501, 'Success', NULL, NULL),
+(33, 8, 1, NULL, 'IN', '2026-05-06 06:35:04', -7.98560740, 112.67355420, 16.3263, 1, 0.752835, 'Success', NULL, NULL),
+(34, 8, 1, NULL, 'OUT', '2026-05-06 06:35:18', -7.98560540, 112.67355540, 16.4663, 1, 0.698964, 'Success', NULL, ''),
+(35, 2, NULL, NULL, 'MANUAL', '2026-05-06 01:00:00', NULL, NULL, NULL, NULL, NULL, 'Sakit', 'Sakit Demam', NULL),
+(36, 2, NULL, NULL, 'MANUAL', '2026-05-06 01:00:00', NULL, NULL, NULL, NULL, NULL, 'Sakit', 'Sakit Demam', NULL),
+(37, 2, NULL, NULL, 'IN', '2026-05-06 07:02:58', -7.98556845, 112.67338414, NULL, 1, 0.64008, 'Success', NULL, NULL),
+(38, 2, NULL, NULL, 'OUT', '2026-05-06 07:03:34', -7.98556527, 112.67332151, NULL, 0, NULL, 'Failed', NULL, 'oke'),
+(39, 2, NULL, NULL, 'OUT', '2026-05-06 07:03:40', -7.98556527, 112.67332151, NULL, 0, NULL, 'Failed', NULL, 'oke'),
+(40, 2, NULL, NULL, 'OUT', '2026-05-06 07:03:53', -7.98556527, 112.67332151, NULL, 1, 0.659661, 'Success', NULL, 'oke'),
+(41, 6, 1, NULL, 'IN', '2026-05-12 12:05:27', -7.98565570, 112.67359670, 21.5617, 1, 0.644792, 'Success', NULL, NULL),
+(42, 6, 1, NULL, 'OUT', '2026-05-12 12:06:55', -7.98567830, 112.67355830, 18.3331, 0, NULL, 'Failed', NULL, ''),
+(43, 6, 1, NULL, 'OUT', '2026-05-12 12:08:55', -7.98561170, 112.67358830, 20.0743, 1, 0.6154, 'Success', NULL, ''),
+(46, 7, 2, NULL, 'IN', '2026-05-13 03:08:53', -7.96616180, 112.60759894, 29.5839, 1, 0.299643, 'Failed', NULL, NULL),
+(47, 7, 2, NULL, 'IN', '2026-05-13 03:09:22', -7.96616180, 112.60759894, 29.5839, 1, 0.313131, 'Failed', NULL, NULL),
+(48, 7, 2, NULL, 'IN', '2026-05-13 03:10:42', -7.96639560, 112.60766210, 15.5017, 1, 0.401729, 'Failed', NULL, NULL),
+(49, 7, 2, NULL, 'IN', '2026-05-13 03:10:55', -7.96639560, 112.60766210, 15.5017, 1, 0.422144, 'Failed', NULL, NULL),
+(50, 7, 1, NULL, 'IN', '2026-05-13 06:20:28', -7.98571170, 112.67353170, 17.7549, 1, 0.567782, 'Success', NULL, NULL),
+(51, 7, 1, NULL, 'OUT', '2026-05-13 06:20:44', -7.98564000, 112.67348500, 9.25088, 1, 0.614198, 'Success', NULL, ''),
+(52, 2, NULL, NULL, 'MANUAL', '2026-05-13 01:00:00', NULL, NULL, NULL, NULL, NULL, 'Sakit', 'Sakit Diare', NULL),
+(53, 10, 1, NULL, 'IN', '2026-05-14 23:06:53', -7.98563140, 112.67354540, 15.5058, 1, 0.599078, 'Success', NULL, NULL),
+(54, 10, 1, NULL, 'OUT', '2026-05-14 23:11:28', -7.98558790, 112.67352820, 13.714, 1, 0.613093, 'Success', NULL, ''),
+(55, 7, 1, 1, 'IN', '2026-05-14 23:17:04', -7.98558340, 112.67352740, NULL, 0, NULL, 'Failed', NULL, NULL),
+(56, 7, 1, 1, 'IN', '2026-05-14 23:17:21', -7.98558340, 112.67352740, NULL, 0, NULL, 'Failed', NULL, NULL),
+(57, 7, 1, 1, 'IN', '2026-05-14 23:17:39', -7.98559550, 112.67353920, NULL, 0, NULL, 'Failed', NULL, NULL),
+(58, 7, 1, 1, 'IN', '2026-05-14 23:17:58', -7.98560130, 112.67351620, NULL, 0, NULL, 'Failed', NULL, NULL),
+(59, 7, 1, 1, 'IN', '2026-05-14 23:18:08', -7.98560130, 112.67351620, NULL, 1, 0.668189, 'Success', NULL, NULL),
+(60, 7, 1, 1, 'OUT', '2026-05-14 23:18:40', -7.98559060, 112.67349950, NULL, 1, 0.731871, 'Success', NULL, 'Selesai'),
+(61, 2, NULL, NULL, 'IN', '2026-05-14 23:27:42', -7.98560720, 112.67354700, NULL, 1, 0.393692, 'Failed', NULL, NULL),
+(62, 2, NULL, NULL, 'IN', '2026-05-14 23:28:02', -7.98560720, 112.67354700, NULL, 1, 0.695437, 'Success', NULL, NULL),
+(63, 2, NULL, NULL, 'OUT', '2026-05-14 23:29:50', -7.98565630, 112.67358920, NULL, 1, 0.728677, 'Success', NULL, 'Ada paket yang belum terkirim'),
+(64, 6, 1, NULL, 'IN', '2026-05-15 13:24:48', -7.98578170, 112.67338330, 19.0677, 1, 0.733509, 'Success', NULL, NULL),
+(65, 6, 1, NULL, 'OUT', '2026-05-15 13:25:31', -7.98570280, 112.67354700, 18.5387, 1, 0.761652, 'Success', NULL, ''),
+(66, 5, NULL, NULL, 'MANUAL', '2026-05-15 01:00:00', NULL, NULL, NULL, NULL, NULL, 'Cuti', 'Mudik', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `branches`
+--
+
+CREATE TABLE `branches` (
+  `branch_id` int(11) NOT NULL,
+  `nama_cabang` varchar(100) NOT NULL,
+  `latitude` decimal(10,8) NOT NULL,
+  `longitude` decimal(11,8) NOT NULL,
+  `radius_meter` int(11) DEFAULT 50
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `branches`
+--
+
+INSERT INTO `branches` (`branch_id`, `nama_cabang`, `latitude`, `longitude`, `radius_meter`) VALUES
+(1, 'Kantor Madyopuro', -7.98561170, 112.67340600, 50),
+(2, 'Kantor Cabang UBHINUS', -7.96641700, 112.60752300, 50);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `face_embeddings`
+--
+
+CREATE TABLE `face_embeddings` (
+  `embedding_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `embedding_data` blob NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `face_embeddings`
+--
+
+INSERT INTO `face_embeddings` (`embedding_id`, `user_id`, `embedding_data`) VALUES
+(1, 2, 0x55b9b53c5e7883bc029dd23cccac293dbe0875bdbca9e03c7079763ddd52573d416f8ebdb3281ebc18ab5c3b18ba3bbd0a1645bd442c8f3ddacc403c6f2d31bb85bd033bdfe95a3d23d616bdeaae06bdf35af13c7f8f513de2c2043df729003cd881ff3bc9324fbc4d011f3d6b25aa3da9b2773cb5b2b5babe5c343bb914053caf6224bcd4a13b3b73f7a93cb0e8203c9ad9113dcacb02bc775763bc9329133dfa4abeba27df85bc7d90823d020d593d68fc3e3df394acbdab9c0cbc5772803d65ea7f3dc117f03c9b01863d24e3663da528aabd25069c3df96554ba32f6dcbc862aaa3ba3b7cfbc4b04b3bcd9acf4bb6385993d051de43c2f889f3d87c6993bc23c8d3d73848bbcc0b2eebcda0167bd14363abd43b0b2bc64ad55bceae5af3bd280ed3c9412c43c4730d03d65f459bd6aad12bb3bef093d08b4423b93030abd555a613acf1dddbcfe88ae3d3cc76cbd9186c7bcada790bc51eac4bd9ae9893c949d0dbd9cff07bd193b2a3c67061cbc6cdf8fbc1810e13bd88419bd522c90bd6b43ecbbe1a891bc1076933d720f18bdc5a565bcbbe8803c488e05bba49314bd480f813d7d3da53cbcfc283dc3b57ebd071368bdd72209bce6b14abd87c8883d260554bd77a7733beaad3cbc92aa2cbd9475babc9a15253d40399abc1bde313c09e8063c806fc3bd05e812be721d113c1f9d023df80476bd06dc5e3bcec716bdd9a89f3c9941423d2307443aedec34bdb578a5bcd8f8d73cfb36913a405a9a3b5c498a3cdcd1483d18ba90bc44b701bd0ce6b6b989af133caa23a6bc86fd673b7c459e3dde60253d1aa0513cc00bbabc6673713c08d504bbd05d9fbd82606d3b1f39d73c8604873cc9b805bde6f7cabc2c037a3dbb1b3ebd5d1dbabc602678bc4a2d4a3daa5579bb64741dbdcf71c93c72d759bdec07253d10d8683d5a8bc13c9b05c0bcd783ff3c3bec38bc2032383b39f9f83cda423c3d71d3943c4f32303d453db2b95a5970bd22883ebd9396a93d26bba6bd37a198bc40f195bd3a5f923c1b1848bdbb7578bde253f63cebd781bc07c505bc5b51093c11f1e33c41f0603dc4c4fe3ddba6e4bcb91033bdd2a11b3df69398bc78b9edbbcd1e793b4ddf3cbd4b6d08bd916ac53c0a734d3df2ac1e3d0d41f83c8b478d3dcbcdbbbc24650cbda631cabd83576bbbe60e6fbdda34ccbcd37cf1bb13b5bbbd9081da3c5600453d7772453de2b566bd58d068bca4ac2cbb46bed83ac6b9ddbb670008bd58e6d2bb6f9abbbc41b86cbd9ab3e9bcaafc823d84030cbd8c6fbdbb5efbf3bc3d0aa0bdadb8803dad4a2b3da86421bdf68bf7bb6766203c3f827d3d8d74ecbcd87c18bd004f573c893a813b5ff53c3dd3ac653d14b619bd6aefae3dce7029bccfc5ae3b6e9b3c3c72eff83b4f1b25bd6d47803cdaded8bb206de7bc67edf63a866f383dff8da73c98b28a3dbc4761bd4cdf4d3dc99241bd50a3063d59b022bd7e0c32bdb1e778bc1dba803cc63f1bbd3cee3fbde985453d23b723bdea83f53c7350d7bd5f46c53d6113d73b6e5141bcc8e8d7bdd733a3bdd17f0f3d96ebc03c22b4643ca91dac3de79981bc51815fbdb060eb3c5907e33db509fc3c89e026bd5dda303d1135523ccc1e3bba7109813d5ef7a9bdc8ed6c3cc8b64a3d720a3d3ded66ef3c2c5f023d877e373a3724a6bdc3d794bce816003d7bccaebd5768233d6eaad6bdd69e593cfcaaaabb6877823bb3fe1f3dd874b2bd1ca60fbdf11acd3af551f23c40fef83c3478fa3c46f81d3d2eea8c3d979fb13c850446bcb32b38bddd32993c1884413cc9e0c63c7c7260bc4fb56dbd31dc693d7592b6bda11353bd2345b8bc8bd6f5bcca1a96bbdb2660bc2b7c993d4e2ffdbba09386bbc8621d3dbf07f7bc16d5783cd2722b3c353083bd2267773dbd407e3d35c640bdf4895cbcabdea7bd464c63bd52dd6dbc93100c3dfc23313d784316bdb44f4b3d20aeec3c9f070abdd401493d6420093cf145e9bb17832a3dbf8b003cdc183b3dc93c8d3db01e6e3dea7a293d20650dbda666b2bcf7d4703c2bfe03bd8fc5123d8718fb3c9c23883c6bb8c5bd033fc13c0d55a83c26d0693d9a22c93c823fb33d8a289dbb66e12e3dbe622abb85ceb8bdfd3c8dbc0ca5bbbd6dd90bbd5d30703cbae4663ce9ff423d22030cbb64f0f6bb7d9ec23ca50816bcf61f5a3d842ce03b0595a23c3d74273d210965bdb79d15bba18a9b3da774a23dcadf783baf025dbd65771cbd4e67bfbb695384bcd28573bd5c7fc5bcf0d54bbdf92c9f3c4e818d3d1e6a83bc7651593d289bc93d93cdde3c611f4f3dfd25653da6a8043d2135e23c178662bdbce8c23c54ba47bb8dbfeb3b4b56823bb3a2753df9f55abdcfb9ad3d8fa7173bbae71cbd073ffd3b76c0cd3dcdf9dbbb451b51bcf224823c9bfe393c79dadb3cab2dc63cc945553dd9a2623d9e0e2a3d142c21bd77f0b43bee03c83c5929353db3007d3d6f4b02bcaac059bdbe23e53cd31f303b9bdbb83cc0aa83ba75e3ab3b2a38a93cb7ca9e3b48e01c3d59a32dbde55ea6bba35981bd21b8103ef05fec3cfa5fffbc9924333ddef2393df6a07ebc670d563c183483bbdf5694bdfb90383d55e8acbd8cab9fbda332333da6f128ba9478edb5b0997f3c92040a3c592a573a17f6d43c844a913cc512dc3dec74783ceb39a43c5aba373c9b567cbca27a34bdeaebfe3a6e8e50bc91728abd7642d7bc6817ff3c854f37bc7d88b63d9acb5fbdeca0763d2cec99bc83d897bd11cb90bdb42e8cbd9997c73dc779fd3cbb3b893d1ff731bd0225533d3cab043c929de73a81aa2b3da3e283bc4f79803d57a9e5bb1b8db4bb3301d7bb76f9ef3c1ce9063d240870bdca94823dcda0e5bb24aaddbccb25bfbd),
+(3, 5, 0x724d0bbc6346f4bcff06c23cc56d723deb4fa5bc505c3abb7566e93cc5c0b83de3d890bd578776bcb5711d3d00e938bd072d65bde288bf3c68d2ab3c52857ebc80b1e8bc54151e3d071d023c2e225ebcc92c903df1ae0e3d09a0863d08ef843c8224d53c3e9506bd272abf3c523efd3c74dc1ebc9260d7bc7df07d3dbd132d3da5e63d3cab2305bd78c21b3b146a133df14b403c02d6c4bc1e4019bbcd1bfd3be497d4bb824271bc59af2c3d3fe6213d7d199f3d43d1c7bd94f4b4bc753bbe3c5a27953dcad597ba2767303d2c973b3d96ef82bdd9eab53d4546fabb233b333dd51d80bcce2b9bbc01109cbce987d93b03599ebca4432bbdc1fff83c02aa963c015b4b3dd2f9e9bc27a349bbdf9b3bbdd7dba0bbcb7ea7bc475515bd725dc1bc8d3acf3cf9da9b3c3920e53d8a97b4bd0bfb36bc7093aabcc32d9eba166b53bdb147153d7df566bc075da33d679881bd028facbbeb3430bdaf6c96bd7f98563c24bf90bd947e4fbdf57836bb1375323d6306f8bbc3e8d9bb49a694bcce033abdbacfdbbc2061f5bc3b988b3d10a2a2bdf33005bd17121a3d24ea583c3c38c7bdc69c3c3dde9312ba1b15d93ce5ffc4bdd34023bd4103ccbc45ad60bd185ea83cbe7962bd2834933d84fb43bdf90841bd484e5d3d504a4cbd2fa5d7bbc2b42bbb1e6fcfbb6d4987bd2d34a1bd01be993cf3b3e13b2dfa92bd08df733debdd8bbde7893a3d804e1a3d535a0e3b022ab3bd463e2ebd4661373c0a5f4a3c3ca1b23bc4b8c73d62bc783dd79edcbbbd4b45bcd5980ebbd10348bd546357bd17138dbb4f17903d64b7603c8c58b0bc3e5decbcf961083c08364e3d088a8dbd2edd003d72aaaf3db82b1f3bae858bbcdbb205bdbeb04c3d932290bd3a08d8bccc8895bd18dbd93c3ddfe9bc76c19ebd5aa81cbcfcc255bd5efb68bc0b72ef3ce05c053d7735383df80b103d2f7311bdf78287bc7d9793bcde54853daad02c3d0c7a003d72e93a3cb2b9463c6b3955bde753be3d262f8fbd8ad490bcf68c8abd51384c3cc69c47bbd254cbbca1f3893cd9d654bd76f3703d053b3f3cf259ab3dce15bf3c5af7db3d9e0da03c92146d3cd5ea343dedb7ccbca7b160bc6745403c6f9f69bddbf0413d4f5a873c0d1f1e3d20276b3d5e738b3c29e05f3d2ec21bbd167a2abd7df2c1bd4f2d1c3de218edbdf42988bbb6b02b3c86659fbd0f0930bd2e262f3d558c4d3be3b02cbde92f813c543868ba38be84bc77feeb3c71ef22bdc145e33bd2217abd8403173c6e9f583d36b03b3c3df49bbd6bbc1d3d09ca32bc938836bdaae78d3db6c85e3d921014bc05d2a1bc0d43443de271353dd8f989bbf84b443c47de04bd88774c3d718de13cdb1ed63c25e1e03b7e31bc3d24b7e83bd6332c3c20a207bc694a40bd52e2cbbc1392e93c62d663bda0078d3c9b6c7cbc938ccebc9178103d701f893c4f1475bdc0ad723df27e013c6759ff3b4a3b0bbd457141bd4c42a73c7035ce3dbb6e2fbd94d6253d5e1b5c3d130471bd9b31583d5a3d3bbd8e5f873dfaead3bcea3e933c5d7cb3bde96e87bd8c96ef3c05df6d3de4d206bca4b1ae3d2de1b7bb814733bd7887463c66763b3de56f2a3d295ca9bc973808bc434c2b3d13e5e23b58aa243d199a23bd3ae0983b25a79f3d7dbe863df89518bcd43a32bd817430bd9ed7c0bd99e5873c894a6b3cafb2a7bd32954a3d6e5778bdd361033d7b061a3dfe5c133b4aafd23cd974d0bdf3eb16bd5a89813d4da6e83cfa5b893c961b313da5c6443de002833d7ca53f3c30dc67b9d0fddfbc1940683c94d6273d27404c3dc240bd3cb8d035bdbeb57a3d8b8007bd2c5437bdac5e39bd5a0acdbb9221e1bcde9285380e60ab3c49501a3dcd3aa73c8495693d41913cbb9113f3ba2b6f9dbc3fbe7cbd87d7a63c76e1fb3c47585cbd8426d5bcab1c62bdfe771dbd5a5973bd03ee663c3463343d7ee80ebdb45fa63c97c8673d4b4f65bdc6382d3d40e0e4bb99c6b8bcdcb26a3dde4905bb35f0753d4b90993d82f0e5bb8e3b013d8eed55bd7c21babc87ff0fbdc89ad8bcf393f03d90d991bb37a00937e13ed5bdf9b60b3d4104503c68e8d93c942b05bc43a23c3d64d9f83ccd44133db00415bc07ef9bbd69c697bd1e00b1bd68eaa2bd79e3a1bc7c2b95ba9d318b3d7329023a975da33bfdfe083c4b0c3fbd8c1d5a3d9baf7d3c7189d73d740d973c5447bfbcb287803c01399f3dd1e8413c01d690bafa5c9bbd55872bbd78b11cbdc98351bda3afbdbd611e943bdbc857bd371cc23c6c797f3da9fd0c3d4df8d73c8683f73d7b0734b94f7c303b2ea5183d9dfbe93c9913653c778bc23b2b4951bb289f013b597bd0396f0b653d8a21383d535995bd9df8ac3de2a2b13c057a32bcce49253dbda2d73df62db43b488ae1bbd31c18bbfd3114bbf3bf303d5bfd2a3b51f4183de8fc073d40b32a3d418b45ba165018bb0911abba70a9073d8255163d41a8933c170af03b983c9d3b1945893bee4a9a3b6710b43a6291873d45e5033c8a81c8bc7bb8c03d286621bc813e1a3ceb8d2ebded6d9f3d6056063bddf04bbde4f5893c8b85663d33806e3c2953d53c6ae31f3bb0ae42bd7735003dfa2767bd68c35ebd3d273d3cb4fabf3a9406403b3049fb3c2c2cf93b7b511c3c74d9263da030413d8c3c873d3922783de59126bc323183bcf5e1b33cf9f8a7bbb422db3ca6a40abda7b81cbd6d03393c0c3df13ce3339cbba1d8723c6ba5d9bb1bb9503df3f59cbb078480bdf834a9bd562755bd83697d3d74a171bc4857773d4c7bb43b86980a3dc0d259bdcb1899bc7396f6b945009ebd93d6f83d8e12eebc5f85d4bca84007bd314a913c571320bc32c453bd47151d3d56f9983c76d9a13cd22ce2bc),
+(4, 6, 0x461e4ebd0c61703d515943bd9dfefe3b90f488bdb51f8d3cf91fa33c020e633dfc9014bd19e2e6bc57669cbddfd9863d6f400f3bbb038a3d367592bc51d2febb989c97bc6b5b673afe35ce3cdd4b69bd0970bd3da0a2683db646ddbc4fd3eb3b2e465bbd9476a3bd9448b33d85fc253c032f25bd40e105bdaf711b3ce581653d7417a63dc4f6953dc7ba933da828fabaa99452bc3d124fbaaacb3cbc45ffc93c2a81f1bcc19aac3b9f57803dd4ef8ebc52e05fbd99c0adbdc5dcfe3cdd08803ca2a0543da700783d5048e63c2e818abd212b4fb9a2ca8d3d4a3ec03c72cd2c3c86a098bde3c02d3c793b6a3d1a8829bd97c21abd7dd232bdeabc353cac1b9cbc86c5933b82d51d3d43f6fe3b0ebf2bbd63370d3d1b45acbc72e48c3ce86051bbe5b78c3db4a45b3dd286223dd9219e3915fe173d129c9cbd42cc96bcd51bb83b00956abdd8aaa03c9d2923bd35834ebdaa3f5fbc32184a3dcbc1593c08517b3d7b78593ddd214abd240c6b3d0c58ffbbc3b3d8bcf0836b3cdde853bc619e60bd67eb4f3d7ef06a3b1308623dfbde67bb657fbbbcd53a613c626c9fbdd224d5bd757e2ebddc4852bc7bbed5bca5d5abbc809eb0bc0405b2bce3d9e63c83074cbd24fcd33c48dec43ce11c8fbd172187bd290132bc5056b7bd04137f3c4f4a19bcb011163c97849d3cc18f403d4afdf0bc68439a3d4097863a9789093eab26a1bc744142bd48c0d5bca112d2bc836165bd34cec5bdad07ccbc7de94c3c4288763cb0a87c3dd700793c062d51bd71879e3b5edb87bd2506e3bdd5fc9dbd082c953bf9160d3da2752f3d859313bc5e5324bc95a41e3d1d95cdbc55b835bd58a39e3d5983123d5773c53cf667273b24a0793cb0702ebd555304bd88ba5d3ce06289bc92eadf3d9fd7ccbc7f56333d1ceb393d472a98bc8e87423dcb76243ca414aa3cdd5964bdc01a4c3de7d3f23bd58c4dbcc40d1a3d94ab903d4bd3693d91b788bc963f1b3d7ef00c3dd59f8cbd57c708bdf83c7bbd34d00b3dfc398bbcd960e53cfbb4c5bd6891653c263f133c2fba1cbcb0308d3d19170bbd6e3f213ddecf96bbb637223db6151b3dc6109a3d79cc6f3d830996bd34b15abc22d89cbc16054fbd9db1973b9025b8bc07dbba3c6491a23c2d92fe3cee07933c10c23f3d70f9ae3c3d6c6a3c6138ca3b725105bd7d1030bde5b4453d7ec895bb27d6f5bc87ff4c3dfe272f3c5628ddbda37015bd39bfd8bc235b03bd1ff1f2bc025ce2bca4b2883df9f44f3c517d963ddf64ddbbb97babbbc266843d931bd9bcbfdc52bca471a03b07469e3d9269c83c9346463d5d1562bd22133a3d06d6633a573e043d64a7953d97ef8d3de33f8c3b2c4f82bd87fb7abd9114f0bc2c2cc13d5b6b65bc7b8d8c3b89cc1cbbd305403d93ffac3d96354ebd5e95d63b0d6740bd7a0b29bc9bd9b63ded91b7bb4780b43c2eb0ec3c9a5f92bb1b08f43cad0351bda42151bd93649dbd497140bc2688873d5e9d7abdd32c2f3d18df7f3bcc2221bc653db53c3c9979bd4848053da02137bdd3c930bb75324cbca16d34bdaed1f7bdc07a0a3dbb9164bb1e57993cb5b76d3d0da8683b77da083eadb08abce968823d833dd7bb8e95203d391605bd1680a13d9f062f3dd68add3c29db67bd5669503b4b3d9dbcb68684bdf32c92bc055f833ce7961ebd85727cbc3a1b8a3de53cfe3c2f2b013d10418dbd30ccc03c7155273dd9ee0f3de8e1343d4933d0bba7dc94bcee11f5bcd5e14bbd5862653d525530bd3122263def21263d35ca31bdc2d3d7bc30b7503cecfcb93cd661633c527dcabc76e3103c808ac33c382a623d95e64bbd114231bd257912bddf8a963d69b4743cba9e803ded2a853dfedc13bb40ac983b70f2953ad0680abded3918bc346cc23c9d14b1bc75def53a768c983d2e29cf3ca868a7bc9390c7bd8869d03c70cc413bed5d303d65ebbcbc349a9bbd83c60dbd5a9216bd69b4033c4c8d1d3d159fba3c7fb196bccb291cbd32ab9bbc39b71a3ca6f9a13c8bd064ba91e220bc9b3350ba9db2623b8ea791bab9691fbd03b8473dfa2e7bbdff9e713d11e273bde6fdc33cb58d39bc977d843ceba1eabc83102f3d2724163cebcd983c8eef6fbd477b823cf5a5cc3cf06656bdc2f6f03b6a44e53ca05b49bce2c912bdfbfc9f3cead23fbd074b3e3d1e77793db88b75bd15057b3d1a2c8d3d6c9340bdddb45f3cdbe18cbc4f5683bcad971c3c185b953c1cf4693ddbd9a7bc865e14bd42bb15bd252cf7bc3d6eccbc2b6ba7bcbec3b9bb6c87e03de87a373d1a75a63c417db43dc58737bd9dfd2e3d73d5b33a3ec3c9b93da4b73c932fa1bb3e30ea3ce0d0aabc369ea33c11c68e3c5ee8c93d7122513cbf576d3ded84fd3c8845b4bb20155bbd9c76073c18302abcc061283c5647d1babcb8b83c9125983df6db0b3deec5453c057944bd49ce31bd2cb599bd158ce43c63e4d9bdea6c863a84c044bb89b667bd55c06d3c800a2cbcd281b5bc56217dba1b46a4bd2aa48e3dec473dbd4ebb533d8864083b41e4c73be033203dc5ce0ebda857533d3df7a8bd683defbbe0f9623d3fed38ba9b54f7ba6a9d953c4bd8a4bc5ed0343c8707053766e580bde1c57abdcdc3ec3dbf527abdb6c535bd5e75f43def51e63b1306bd3c4214ccbc80f5ebba1835a33da6ffdabba19c153dfc3863bd4f2186bdd2ef58bd3710cb3bc75e4bbd26030b3d777dbdbaff129cbcd8a3ef3c99ea403d68aaeabcf39a893cd0a6ccbc686007bd4989d6bb565dbe3c84c9c43cdcef4a3c65da763dc778f9bc2fecae3cb37e5f3d2574953ca6d7883d3d29c4bd22c3953d9c7f7d3c0dffcebb3cf6bebdddcd593c386c53bcc4b4633db949c43cc6fd87bb999864bc29ca43bb),
+(5, 7, 0x55b9b53c5e7883bc029dd23cccac293dbe0875bdbca9e03c7079763ddd52573d416f8ebdb3281ebc18ab5c3b18ba3bbd0a1645bd442c8f3ddacc403c6f2d31bb85bd033bdfe95a3d23d616bdeaae06bdf35af13c7f8f513de2c2043df729003cd881ff3bc9324fbc4d011f3d6b25aa3da9b2773cb5b2b5babe5c343bb914053caf6224bcd4a13b3b73f7a93cb0e8203c9ad9113dcacb02bc775763bc9329133dfa4abeba27df85bc7d90823d020d593d68fc3e3df394acbdab9c0cbc5772803d65ea7f3dc117f03c9b01863d24e3663da528aabd25069c3df96554ba32f6dcbc862aaa3ba3b7cfbc4b04b3bcd9acf4bb6385993d051de43c2f889f3d87c6993bc23c8d3d73848bbcc0b2eebcda0167bd14363abd43b0b2bc64ad55bceae5af3bd280ed3c9412c43c4730d03d65f459bd6aad12bb3bef093d08b4423b93030abd555a613acf1dddbcfe88ae3d3cc76cbd9186c7bcada790bc51eac4bd9ae9893c949d0dbd9cff07bd193b2a3c67061cbc6cdf8fbc1810e13bd88419bd522c90bd6b43ecbbe1a891bc1076933d720f18bdc5a565bcbbe8803c488e05bba49314bd480f813d7d3da53cbcfc283dc3b57ebd071368bdd72209bce6b14abd87c8883d260554bd77a7733beaad3cbc92aa2cbd9475babc9a15253d40399abc1bde313c09e8063c806fc3bd05e812be721d113c1f9d023df80476bd06dc5e3bcec716bdd9a89f3c9941423d2307443aedec34bdb578a5bcd8f8d73cfb36913a405a9a3b5c498a3cdcd1483d18ba90bc44b701bd0ce6b6b989af133caa23a6bc86fd673b7c459e3dde60253d1aa0513cc00bbabc6673713c08d504bbd05d9fbd82606d3b1f39d73c8604873cc9b805bde6f7cabc2c037a3dbb1b3ebd5d1dbabc602678bc4a2d4a3daa5579bb64741dbdcf71c93c72d759bdec07253d10d8683d5a8bc13c9b05c0bcd783ff3c3bec38bc2032383b39f9f83cda423c3d71d3943c4f32303d453db2b95a5970bd22883ebd9396a93d26bba6bd37a198bc40f195bd3a5f923c1b1848bdbb7578bde253f63cebd781bc07c505bc5b51093c11f1e33c41f0603dc4c4fe3ddba6e4bcb91033bdd2a11b3df69398bc78b9edbbcd1e793b4ddf3cbd4b6d08bd916ac53c0a734d3df2ac1e3d0d41f83c8b478d3dcbcdbbbc24650cbda631cabd83576bbbe60e6fbdda34ccbcd37cf1bb13b5bbbd9081da3c5600453d7772453de2b566bd58d068bca4ac2cbb46bed83ac6b9ddbb670008bd58e6d2bb6f9abbbc41b86cbd9ab3e9bcaafc823d84030cbd8c6fbdbb5efbf3bc3d0aa0bdadb8803dad4a2b3da86421bdf68bf7bb6766203c3f827d3d8d74ecbcd87c18bd004f573c893a813b5ff53c3dd3ac653d14b619bd6aefae3dce7029bccfc5ae3b6e9b3c3c72eff83b4f1b25bd6d47803cdaded8bb206de7bc67edf63a866f383dff8da73c98b28a3dbc4761bd4cdf4d3dc99241bd50a3063d59b022bd7e0c32bdb1e778bc1dba803cc63f1bbd3cee3fbde985453d23b723bdea83f53c7350d7bd5f46c53d6113d73b6e5141bcc8e8d7bdd733a3bdd17f0f3d96ebc03c22b4643ca91dac3de79981bc51815fbdb060eb3c5907e33db509fc3c89e026bd5dda303d1135523ccc1e3bba7109813d5ef7a9bdc8ed6c3cc8b64a3d720a3d3ded66ef3c2c5f023d877e373a3724a6bdc3d794bce816003d7bccaebd5768233d6eaad6bdd69e593cfcaaaabb6877823bb3fe1f3dd874b2bd1ca60fbdf11acd3af551f23c40fef83c3478fa3c46f81d3d2eea8c3d979fb13c850446bcb32b38bddd32993c1884413cc9e0c63c7c7260bc4fb56dbd31dc693d7592b6bda11353bd2345b8bc8bd6f5bcca1a96bbdb2660bc2b7c993d4e2ffdbba09386bbc8621d3dbf07f7bc16d5783cd2722b3c353083bd2267773dbd407e3d35c640bdf4895cbcabdea7bd464c63bd52dd6dbc93100c3dfc23313d784316bdb44f4b3d20aeec3c9f070abdd401493d6420093cf145e9bb17832a3dbf8b003cdc183b3dc93c8d3db01e6e3dea7a293d20650dbda666b2bcf7d4703c2bfe03bd8fc5123d8718fb3c9c23883c6bb8c5bd033fc13c0d55a83c26d0693d9a22c93c823fb33d8a289dbb66e12e3dbe622abb85ceb8bdfd3c8dbc0ca5bbbd6dd90bbd5d30703cbae4663ce9ff423d22030cbb64f0f6bb7d9ec23ca50816bcf61f5a3d842ce03b0595a23c3d74273d210965bdb79d15bba18a9b3da774a23dcadf783baf025dbd65771cbd4e67bfbb695384bcd28573bd5c7fc5bcf0d54bbdf92c9f3c4e818d3d1e6a83bc7651593d289bc93d93cdde3c611f4f3dfd25653da6a8043d2135e23c178662bdbce8c23c54ba47bb8dbfeb3b4b56823bb3a2753df9f55abdcfb9ad3d8fa7173bbae71cbd073ffd3b76c0cd3dcdf9dbbb451b51bcf224823c9bfe393c79dadb3cab2dc63cc945553dd9a2623d9e0e2a3d142c21bd77f0b43bee03c83c5929353db3007d3d6f4b02bcaac059bdbe23e53cd31f303b9bdbb83cc0aa83ba75e3ab3b2a38a93cb7ca9e3b48e01c3d59a32dbde55ea6bba35981bd21b8103ef05fec3cfa5fffbc9924333ddef2393df6a07ebc670d563c183483bbdf5694bdfb90383d55e8acbd8cab9fbda332333da6f128ba9478edb5b0997f3c92040a3c592a573a17f6d43c844a913cc512dc3dec74783ceb39a43c5aba373c9b567cbca27a34bdeaebfe3a6e8e50bc91728abd7642d7bc6817ff3c854f37bc7d88b63d9acb5fbdeca0763d2cec99bc83d897bd11cb90bdb42e8cbd9997c73dc779fd3cbb3b893d1ff731bd0225533d3cab043c929de73a81aa2b3da3e283bc4f79803d57a9e5bb1b8db4bb3301d7bb76f9ef3c1ce9063d240870bdca94823dcda0e5bb24aaddbccb25bfbd),
+(6, 8, 0x55b9b53c5e7883bc029dd23cccac293dbe0875bdbca9e03c7079763ddd52573d416f8ebdb3281ebc18ab5c3b18ba3bbd0a1645bd442c8f3ddacc403c6f2d31bb85bd033bdfe95a3d23d616bdeaae06bdf35af13c7f8f513de2c2043df729003cd881ff3bc9324fbc4d011f3d6b25aa3da9b2773cb5b2b5babe5c343bb914053caf6224bcd4a13b3b73f7a93cb0e8203c9ad9113dcacb02bc775763bc9329133dfa4abeba27df85bc7d90823d020d593d68fc3e3df394acbdab9c0cbc5772803d65ea7f3dc117f03c9b01863d24e3663da528aabd25069c3df96554ba32f6dcbc862aaa3ba3b7cfbc4b04b3bcd9acf4bb6385993d051de43c2f889f3d87c6993bc23c8d3d73848bbcc0b2eebcda0167bd14363abd43b0b2bc64ad55bceae5af3bd280ed3c9412c43c4730d03d65f459bd6aad12bb3bef093d08b4423b93030abd555a613acf1dddbcfe88ae3d3cc76cbd9186c7bcada790bc51eac4bd9ae9893c949d0dbd9cff07bd193b2a3c67061cbc6cdf8fbc1810e13bd88419bd522c90bd6b43ecbbe1a891bc1076933d720f18bdc5a565bcbbe8803c488e05bba49314bd480f813d7d3da53cbcfc283dc3b57ebd071368bdd72209bce6b14abd87c8883d260554bd77a7733beaad3cbc92aa2cbd9475babc9a15253d40399abc1bde313c09e8063c806fc3bd05e812be721d113c1f9d023df80476bd06dc5e3bcec716bdd9a89f3c9941423d2307443aedec34bdb578a5bcd8f8d73cfb36913a405a9a3b5c498a3cdcd1483d18ba90bc44b701bd0ce6b6b989af133caa23a6bc86fd673b7c459e3dde60253d1aa0513cc00bbabc6673713c08d504bbd05d9fbd82606d3b1f39d73c8604873cc9b805bde6f7cabc2c037a3dbb1b3ebd5d1dbabc602678bc4a2d4a3daa5579bb64741dbdcf71c93c72d759bdec07253d10d8683d5a8bc13c9b05c0bcd783ff3c3bec38bc2032383b39f9f83cda423c3d71d3943c4f32303d453db2b95a5970bd22883ebd9396a93d26bba6bd37a198bc40f195bd3a5f923c1b1848bdbb7578bde253f63cebd781bc07c505bc5b51093c11f1e33c41f0603dc4c4fe3ddba6e4bcb91033bdd2a11b3df69398bc78b9edbbcd1e793b4ddf3cbd4b6d08bd916ac53c0a734d3df2ac1e3d0d41f83c8b478d3dcbcdbbbc24650cbda631cabd83576bbbe60e6fbdda34ccbcd37cf1bb13b5bbbd9081da3c5600453d7772453de2b566bd58d068bca4ac2cbb46bed83ac6b9ddbb670008bd58e6d2bb6f9abbbc41b86cbd9ab3e9bcaafc823d84030cbd8c6fbdbb5efbf3bc3d0aa0bdadb8803dad4a2b3da86421bdf68bf7bb6766203c3f827d3d8d74ecbcd87c18bd004f573c893a813b5ff53c3dd3ac653d14b619bd6aefae3dce7029bccfc5ae3b6e9b3c3c72eff83b4f1b25bd6d47803cdaded8bb206de7bc67edf63a866f383dff8da73c98b28a3dbc4761bd4cdf4d3dc99241bd50a3063d59b022bd7e0c32bdb1e778bc1dba803cc63f1bbd3cee3fbde985453d23b723bdea83f53c7350d7bd5f46c53d6113d73b6e5141bcc8e8d7bdd733a3bdd17f0f3d96ebc03c22b4643ca91dac3de79981bc51815fbdb060eb3c5907e33db509fc3c89e026bd5dda303d1135523ccc1e3bba7109813d5ef7a9bdc8ed6c3cc8b64a3d720a3d3ded66ef3c2c5f023d877e373a3724a6bdc3d794bce816003d7bccaebd5768233d6eaad6bdd69e593cfcaaaabb6877823bb3fe1f3dd874b2bd1ca60fbdf11acd3af551f23c40fef83c3478fa3c46f81d3d2eea8c3d979fb13c850446bcb32b38bddd32993c1884413cc9e0c63c7c7260bc4fb56dbd31dc693d7592b6bda11353bd2345b8bc8bd6f5bcca1a96bbdb2660bc2b7c993d4e2ffdbba09386bbc8621d3dbf07f7bc16d5783cd2722b3c353083bd2267773dbd407e3d35c640bdf4895cbcabdea7bd464c63bd52dd6dbc93100c3dfc23313d784316bdb44f4b3d20aeec3c9f070abdd401493d6420093cf145e9bb17832a3dbf8b003cdc183b3dc93c8d3db01e6e3dea7a293d20650dbda666b2bcf7d4703c2bfe03bd8fc5123d8718fb3c9c23883c6bb8c5bd033fc13c0d55a83c26d0693d9a22c93c823fb33d8a289dbb66e12e3dbe622abb85ceb8bdfd3c8dbc0ca5bbbd6dd90bbd5d30703cbae4663ce9ff423d22030cbb64f0f6bb7d9ec23ca50816bcf61f5a3d842ce03b0595a23c3d74273d210965bdb79d15bba18a9b3da774a23dcadf783baf025dbd65771cbd4e67bfbb695384bcd28573bd5c7fc5bcf0d54bbdf92c9f3c4e818d3d1e6a83bc7651593d289bc93d93cdde3c611f4f3dfd25653da6a8043d2135e23c178662bdbce8c23c54ba47bb8dbfeb3b4b56823bb3a2753df9f55abdcfb9ad3d8fa7173bbae71cbd073ffd3b76c0cd3dcdf9dbbb451b51bcf224823c9bfe393c79dadb3cab2dc63cc945553dd9a2623d9e0e2a3d142c21bd77f0b43bee03c83c5929353db3007d3d6f4b02bcaac059bdbe23e53cd31f303b9bdbb83cc0aa83ba75e3ab3b2a38a93cb7ca9e3b48e01c3d59a32dbde55ea6bba35981bd21b8103ef05fec3cfa5fffbc9924333ddef2393df6a07ebc670d563c183483bbdf5694bdfb90383d55e8acbd8cab9fbda332333da6f128ba9478edb5b0997f3c92040a3c592a573a17f6d43c844a913cc512dc3dec74783ceb39a43c5aba373c9b567cbca27a34bdeaebfe3a6e8e50bc91728abd7642d7bc6817ff3c854f37bc7d88b63d9acb5fbdeca0763d2cec99bc83d897bd11cb90bdb42e8cbd9997c73dc779fd3cbb3b893d1ff731bd0225533d3cab043c929de73a81aa2b3da3e283bc4f79803d57a9e5bb1b8db4bb3301d7bb76f9ef3c1ce9063d240870bdca94823dcda0e5bb24aaddbccb25bfbd),
+(8, 10, 0x55b9b53c5e7883bc029dd23cccac293dbe0875bdbca9e03c7079763ddd52573d416f8ebdb3281ebc18ab5c3b18ba3bbd0a1645bd442c8f3ddacc403c6f2d31bb85bd033bdfe95a3d23d616bdeaae06bdf35af13c7f8f513de2c2043df729003cd881ff3bc9324fbc4d011f3d6b25aa3da9b2773cb5b2b5babe5c343bb914053caf6224bcd4a13b3b73f7a93cb0e8203c9ad9113dcacb02bc775763bc9329133dfa4abeba27df85bc7d90823d020d593d68fc3e3df394acbdab9c0cbc5772803d65ea7f3dc117f03c9b01863d24e3663da528aabd25069c3df96554ba32f6dcbc862aaa3ba3b7cfbc4b04b3bcd9acf4bb6385993d051de43c2f889f3d87c6993bc23c8d3d73848bbcc0b2eebcda0167bd14363abd43b0b2bc64ad55bceae5af3bd280ed3c9412c43c4730d03d65f459bd6aad12bb3bef093d08b4423b93030abd555a613acf1dddbcfe88ae3d3cc76cbd9186c7bcada790bc51eac4bd9ae9893c949d0dbd9cff07bd193b2a3c67061cbc6cdf8fbc1810e13bd88419bd522c90bd6b43ecbbe1a891bc1076933d720f18bdc5a565bcbbe8803c488e05bba49314bd480f813d7d3da53cbcfc283dc3b57ebd071368bdd72209bce6b14abd87c8883d260554bd77a7733beaad3cbc92aa2cbd9475babc9a15253d40399abc1bde313c09e8063c806fc3bd05e812be721d113c1f9d023df80476bd06dc5e3bcec716bdd9a89f3c9941423d2307443aedec34bdb578a5bcd8f8d73cfb36913a405a9a3b5c498a3cdcd1483d18ba90bc44b701bd0ce6b6b989af133caa23a6bc86fd673b7c459e3dde60253d1aa0513cc00bbabc6673713c08d504bbd05d9fbd82606d3b1f39d73c8604873cc9b805bde6f7cabc2c037a3dbb1b3ebd5d1dbabc602678bc4a2d4a3daa5579bb64741dbdcf71c93c72d759bdec07253d10d8683d5a8bc13c9b05c0bcd783ff3c3bec38bc2032383b39f9f83cda423c3d71d3943c4f32303d453db2b95a5970bd22883ebd9396a93d26bba6bd37a198bc40f195bd3a5f923c1b1848bdbb7578bde253f63cebd781bc07c505bc5b51093c11f1e33c41f0603dc4c4fe3ddba6e4bcb91033bdd2a11b3df69398bc78b9edbbcd1e793b4ddf3cbd4b6d08bd916ac53c0a734d3df2ac1e3d0d41f83c8b478d3dcbcdbbbc24650cbda631cabd83576bbbe60e6fbdda34ccbcd37cf1bb13b5bbbd9081da3c5600453d7772453de2b566bd58d068bca4ac2cbb46bed83ac6b9ddbb670008bd58e6d2bb6f9abbbc41b86cbd9ab3e9bcaafc823d84030cbd8c6fbdbb5efbf3bc3d0aa0bdadb8803dad4a2b3da86421bdf68bf7bb6766203c3f827d3d8d74ecbcd87c18bd004f573c893a813b5ff53c3dd3ac653d14b619bd6aefae3dce7029bccfc5ae3b6e9b3c3c72eff83b4f1b25bd6d47803cdaded8bb206de7bc67edf63a866f383dff8da73c98b28a3dbc4761bd4cdf4d3dc99241bd50a3063d59b022bd7e0c32bdb1e778bc1dba803cc63f1bbd3cee3fbde985453d23b723bdea83f53c7350d7bd5f46c53d6113d73b6e5141bcc8e8d7bdd733a3bdd17f0f3d96ebc03c22b4643ca91dac3de79981bc51815fbdb060eb3c5907e33db509fc3c89e026bd5dda303d1135523ccc1e3bba7109813d5ef7a9bdc8ed6c3cc8b64a3d720a3d3ded66ef3c2c5f023d877e373a3724a6bdc3d794bce816003d7bccaebd5768233d6eaad6bdd69e593cfcaaaabb6877823bb3fe1f3dd874b2bd1ca60fbdf11acd3af551f23c40fef83c3478fa3c46f81d3d2eea8c3d979fb13c850446bcb32b38bddd32993c1884413cc9e0c63c7c7260bc4fb56dbd31dc693d7592b6bda11353bd2345b8bc8bd6f5bcca1a96bbdb2660bc2b7c993d4e2ffdbba09386bbc8621d3dbf07f7bc16d5783cd2722b3c353083bd2267773dbd407e3d35c640bdf4895cbcabdea7bd464c63bd52dd6dbc93100c3dfc23313d784316bdb44f4b3d20aeec3c9f070abdd401493d6420093cf145e9bb17832a3dbf8b003cdc183b3dc93c8d3db01e6e3dea7a293d20650dbda666b2bcf7d4703c2bfe03bd8fc5123d8718fb3c9c23883c6bb8c5bd033fc13c0d55a83c26d0693d9a22c93c823fb33d8a289dbb66e12e3dbe622abb85ceb8bdfd3c8dbc0ca5bbbd6dd90bbd5d30703cbae4663ce9ff423d22030cbb64f0f6bb7d9ec23ca50816bcf61f5a3d842ce03b0595a23c3d74273d210965bdb79d15bba18a9b3da774a23dcadf783baf025dbd65771cbd4e67bfbb695384bcd28573bd5c7fc5bcf0d54bbdf92c9f3c4e818d3d1e6a83bc7651593d289bc93d93cdde3c611f4f3dfd25653da6a8043d2135e23c178662bdbce8c23c54ba47bb8dbfeb3b4b56823bb3a2753df9f55abdcfb9ad3d8fa7173bbae71cbd073ffd3b76c0cd3dcdf9dbbb451b51bcf224823c9bfe393c79dadb3cab2dc63cc945553dd9a2623d9e0e2a3d142c21bd77f0b43bee03c83c5929353db3007d3d6f4b02bcaac059bdbe23e53cd31f303b9bdbb83cc0aa83ba75e3ab3b2a38a93cb7ca9e3b48e01c3d59a32dbde55ea6bba35981bd21b8103ef05fec3cfa5fffbc9924333ddef2393df6a07ebc670d563c183483bbdf5694bdfb90383d55e8acbd8cab9fbda332333da6f128ba9478edb5b0997f3c92040a3c592a573a17f6d43c844a913cc512dc3dec74783ceb39a43c5aba373c9b567cbca27a34bdeaebfe3a6e8e50bc91728abd7642d7bc6817ff3c854f37bc7d88b63d9acb5fbdeca0763d2cec99bc83d897bd11cb90bdb42e8cbd9997c73dc779fd3cbb3b893d1ff731bd0225533d3cab043c929de73a81aa2b3da3e283bc4f79803d57a9e5bb1b8db4bb3301d7bb76f9ef3c1ce9063d240870bdca94823dcda0e5bb24aaddbccb25bfbd);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tugas_luar`
+--
+
+CREATE TABLE `tugas_luar` (
+  `tugas_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `tanggal_mulai` date NOT NULL,
+  `tanggal_selesai` date NOT NULL,
+  `keterangan` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `tugas_luar`
+--
+
+INSERT INTO `tugas_luar` (`tugas_id`, `user_id`, `tanggal_mulai`, `tanggal_selesai`, `keterangan`, `created_at`) VALUES
+(1, 7, '2026-05-15', '2026-05-15', 'Menghadiri Rapat Koordinasi di Surabaya', '2026-05-14 23:15:54');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `user_id` int(11) NOT NULL,
+  `nik` varchar(20) NOT NULL,
+  `nama_lengkap` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `role` enum('karyawan','admin') DEFAULT 'karyawan',
+  `branch_id` int(11) DEFAULT NULL,
+  `is_dynamic` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`user_id`, `nik`, `nama_lengkap`, `email`, `password_hash`, `role`, `branch_id`, `is_dynamic`) VALUES
+(1, 'ADM-001', 'Super Admin HRD', 'admin@gmail.com', 'scrypt:32768:8:1$5eh6MuvGVvR0K8Pe$d9c9fbc58085a8c87dd2856d9efcfc5621d558efcb9ba37a15782f56dc00cf4e6b17a67f6e0fab1b63308ef2c9b18810f2942f892aa32873bf4604fd9ef76ad0', 'admin', 1, 0),
+(2, '7371050405050002', 'Alvin Ricardo', 'alvin@gmail.com', 'scrypt:32768:8:1$vCqv3Xc3BbKn0aIX$7b72b12e4fe1d3f22e4b43b09f01fd10e444f11a0422f8d18e27d239947b0bdee4339fbef9683575a23c8bbcd010c841774d3b5f27552db8b8230165fece5892', 'karyawan', 1, 1),
+(5, '7371050504050002', 'Demian Prajaya', 'Demian@gmail.com', 'scrypt:32768:8:1$nwjDY0h4xI2C3ocI$458cb5e5451faf6baa7cd74f01c74c6cd90706033326149aa336674ffe10adb92d6c827184d4023709bb7199c6c65f819713dbd283ad3f223babfa6bda25798d', 'karyawan', 2, 1),
+(6, '7371050505050002', 'Ricardo Laurence', 'ricardo@gmail.com', 'scrypt:32768:8:1$PgNDM7ejDYh2HjPK$d963c22a30d331e824b364135843b84c048d7cc7bd1cb7097d58aa4f25f252f9ec5e4896054dcbae22666f60707009a1a270a7f13d7ee7ba9050b3884d96ff59', 'karyawan', 1, 0),
+(7, '7371053101750001', 'Lina Putri Wijaya', 'lina@gmail.com', 'scrypt:32768:8:1$kUE4wekTGZtrMZ5y$a8b1115c7dac888a34d2b587dd7752c0929bce910959c10e227fe74de0fad6c37abfd7fe1dd3cc26db41a53802a806280103506b3d67f2a05a6b91d651e635a3', 'karyawan', 1, 0),
+(8, '7371050505000212', 'Merah Mudawan', 'merah@gmail.com', 'scrypt:32768:8:1$QT79aBEcnQXTGBuP$9d9278967253664f59d49d0374333374c2b9ebb2d7540f7923b365e32f06d5fcb9fb2fbc81355715f8f3e0e97b741b7f216eae6a97249e34ba9e56c1e3c31b86', 'karyawan', 1, 0),
+(10, '7371020405030002', 'Ricardo Milos', 'Miloz@gmail.com', 'scrypt:32768:8:1$luIF8wyzgCPcOkYy$0ac337fe55cf7558a3733cfabf6adb05ad1f3085f0f16a10d78bff233cd1695c2f2f74cecd74af7d3cfe88c812c264158dc1a20a9f55ed75462c5b515efe38f9', 'karyawan', 1, 0);
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `attendance_logs`
+--
+ALTER TABLE `attendance_logs`
+  ADD PRIMARY KEY (`log_id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `attempted_branch_id` (`attempted_branch_id`),
+  ADD KEY `fk_attendance_tugas` (`tugas_id`);
+
+--
+-- Indexes for table `branches`
+--
+ALTER TABLE `branches`
+  ADD PRIMARY KEY (`branch_id`);
+
+--
+-- Indexes for table `face_embeddings`
+--
+ALTER TABLE `face_embeddings`
+  ADD PRIMARY KEY (`embedding_id`),
+  ADD UNIQUE KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `tugas_luar`
+--
+ALTER TABLE `tugas_luar`
+  ADD PRIMARY KEY (`tugas_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`user_id`),
+  ADD UNIQUE KEY `nik` (`nik`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `branch_id` (`branch_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `attendance_logs`
+--
+ALTER TABLE `attendance_logs`
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
+
+--
+-- AUTO_INCREMENT for table `branches`
+--
+ALTER TABLE `branches`
+  MODIFY `branch_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `face_embeddings`
+--
+ALTER TABLE `face_embeddings`
+  MODIFY `embedding_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `tugas_luar`
+--
+ALTER TABLE `tugas_luar`
+  MODIFY `tugas_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `attendance_logs`
+--
+ALTER TABLE `attendance_logs`
+  ADD CONSTRAINT `attendance_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `attendance_logs_ibfk_2` FOREIGN KEY (`attempted_branch_id`) REFERENCES `branches` (`branch_id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_attendance_tugas` FOREIGN KEY (`tugas_id`) REFERENCES `tugas_luar` (`tugas_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `face_embeddings`
+--
+ALTER TABLE `face_embeddings`
+  ADD CONSTRAINT `face_embeddings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `tugas_luar`
+--
+ALTER TABLE `tugas_luar`
+  ADD CONSTRAINT `tugas_luar_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`branch_id`) ON DELETE SET NULL;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

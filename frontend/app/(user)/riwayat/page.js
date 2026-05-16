@@ -16,7 +16,7 @@ export default function RiwayatPage() {
         const token = localStorage.getItem('access_token');
         if (!token) { router.push('/'); return; }
 
-        const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; 
+        const API_URL = process.env.NEXT_PUBLIC_API_URL; 
 
         const res = await axios.get(`${API_URL}/attendance/history`, {
           headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }

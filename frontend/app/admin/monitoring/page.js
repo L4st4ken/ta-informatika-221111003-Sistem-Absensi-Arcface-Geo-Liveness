@@ -16,7 +16,7 @@ export default function MonitoringPage() {
   const [selectedBranch, setSelectedBranch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   const fetchMonitoring = useCallback(async () => {
     setLoading(true);

@@ -30,9 +30,9 @@ export default function ScheduleManagement() {
       const config = { headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' } };
 
       const [resSched, resUsers, resBranches] = await Promise.all([
-        axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/schedule/', config),
-        axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/users', config),
-        axios.get('https://nondeliberately-subordinal-maximina.ngrok-free.dev/admin/branches', config)
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/schedule/`, config),
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/admin/users`, config),
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/admin/branches`, config)
       ]);
 
       setSchedules(resSched.data);
@@ -64,7 +64,7 @@ export default function ScheduleManagement() {
       const payload = { ...formData };
       if (payload.tipe_jadwal === 'Dinas Luar') payload.branch_id = null;
 
-      await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/schedule/', payload, {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/schedule/`, payload, {
         headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       alert("Jadwal dinas berhasil dibuat!");
@@ -79,7 +79,7 @@ export default function ScheduleManagement() {
     if(!confirm("Hapus jadwal ini? Karyawan akan kembali ke Shift Normal.")) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`https://nondeliberately-subordinal-maximina.ngrok-free.dev/schedule/${id}`, {
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/schedule/${id}`, {
         headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });
       initData();

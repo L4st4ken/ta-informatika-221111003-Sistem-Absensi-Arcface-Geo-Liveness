@@ -23,7 +23,7 @@ export default function AdminDashboard() {
         const token = localStorage.getItem('access_token');
         if (!token) return;
         
-        const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL;
         const res = await axios.get(`${API_URL}/admin/branches`, {
           headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
           return;
         }
 
-        const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev';
+        const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
         let endpoint = `${API_URL}/admin/dashboard-stats?`;
         if (filterNama) endpoint += `nama=${filterNama}&`;

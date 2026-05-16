@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react'; // <-- Tambah Suspense di sini
 import Webcam from 'react-webcam';
 import axios from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -18,7 +18,8 @@ const calculateHaversine = (lat1, lon1, lat2, lon2) => {
   return Math.round(R * c); 
 };
 
-export default function AbsensiPage() {
+// --- KOMPONEN KEDUA: LOGIKA UTAMA ABSENSI (Dipisah agar aman dari Error Prerender) ---
+function AbsensiForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const attemptType = searchParams.get('type') || 'IN'; 
@@ -46,9 +47,9 @@ export default function AbsensiPage() {
 
   // --- STATE UNTUK SOP & LAPORAN ---
   const [sopLapangan, setSopLapangan] = useState({ tugas_selesai: false, aman: false });
-  const [laporanKegiatan, setLaporanKegiatan] = useState(""); // <-- TAMBAHAN BARU
+  const [laporanKegiatan, setLaporanKegiatan] = useState(""); 
 
-  // Logika Validasi Berlapis (Checkbox harus dicentang & Teks tidak boleh kosong)
+  // Logika Validasi Berlapis
   let isAllSopChecked = true; 
   if (attemptType === 'OUT' && isFlexible) {
     isAllSopChecked = sopLapangan.tugas_selesai && sopLapangan.aman && laporanKegiatan.trim() !== "";
@@ -64,9 +65,8 @@ export default function AbsensiPage() {
       if (!token) { router.push('/'); return; }
 
       try {
-        // A. AMBIL DATA CABANG DARI BACKEND
         setMessage("Mengambil data cabang...");
-        const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; 
+        const API_URL = process.env.NEXT_PUBLIC_API_URL; 
         const res = await axios.get(`${API_URL}/attendance/office-location`, {
           headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
         });
@@ -89,7 +89,6 @@ export default function AbsensiPage() {
           }
         }
 
-        // B. MULAI PENCARIAN GPS
         if (!navigator.geolocation) {
           if (isMounted) { setMessage("Browser tidak support GPS."); setLoading(false); }
           return;
@@ -107,7 +106,6 @@ export default function AbsensiPage() {
             if (currentAccuracy < bestAccuracy) {
                bestAccuracy = currentAccuracy;
                
-               // C. HITUNG JARAK DINAMIS
                let currentDist = null;
                if (!branchData.is_flexible && branchData.latitude) {
                  currentDist = calculateHaversine(
@@ -154,9 +152,9 @@ export default function AbsensiPage() {
 
         setTimeout(() => {
             if (isMounted && watchId !== null && loading) {
-                navigator.geolocation.clearWatch(watchId);
-                setLoading(false);
-                setMessage(bestAccuracy !== Infinity ? "Siap!" : "Gagal mengunci GPS");
+                 navigator.geolocation.clearWatch(watchId);
+                 setLoading(false);
+                 setMessage(bestAccuracy !== Infinity ? "Siap!" : "Gagal mengunci GPS");
             }
         }, 8000);
 
@@ -203,15 +201,14 @@ export default function AbsensiPage() {
 
     try {
       const token = localStorage.getItem('access_token');
-      const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; 
+      const API_URL = process.env.NEXT_PUBLIC_API_URL; 
 
-      // --- TAMBAHKAN LAPORAN KEGIATAN KE PAYLOAD ---
       const payload = {
         image_base64: imageSrc,
         latitude: location?.latitude || null,
         longitude: location?.longitude || null,
         attempt_type: attemptType,
-        laporan_kegiatan: laporanKegiatan // <-- DATA TEKS DIKIRIM KE FLASK
+        laporan_kegiatan: laporanKegiatan 
       };
 
       const res = await axios.post(`${API_URL}/attendance/attend`, payload, {
@@ -240,7 +237,7 @@ export default function AbsensiPage() {
     } finally {
       setIsProcessing(false);
     }
-  },[location, attemptType, laporanKegiatan, router]); // <-- Tambahkan dependency laporanKegiatan
+  },[location, attemptType, laporanKegiatan, router]);
 
   // 4. LOGIKA HITUNG MUNDUR
   useEffect(() => {
@@ -323,7 +320,6 @@ export default function AbsensiPage() {
         </div>
       )}
 
-      {/* --- FORM SOP DAN LAPORAN (HANYA MUNCUL SAAT PULANG & FLEKSIBEL) --- */}
       {attemptType === 'OUT' && isFlexible && countdown === null && !isProcessing && !isSuccess && !isFailed && (
         <div className="w-full max-w-[480px] mt-6 bg-gray-900 border border-gray-700 rounded-2xl p-5 shadow-xl animate-in slide-in-from-bottom-4">
           <h3 className="flex items-center gap-2 text-orange-400 font-bold mb-3 border-b border-gray-700 pb-2">
@@ -347,7 +343,6 @@ export default function AbsensiPage() {
             </label>
           </div>
 
-          {/* TAMBAHAN BARU: TEXT AREA UNTUK LAPORAN */}
           <div className="border-t border-gray-700 pt-3">
             <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">
               Laporan Kegiatan Harian <span className="text-red-500">*</span>
@@ -392,7 +387,6 @@ export default function AbsensiPage() {
         </button>
       )}
 
-      {/* TAMPILAN JARAK DINAMIS DAN AKURASI */}
       {location?.latitude && (
         <div className="mt-4 flex flex-col items-center gap-2">
           {!isFlexible && distanceToOffice !== null && (
@@ -422,5 +416,18 @@ export default function AbsensiPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+// --- KOMPONEN UTAMA (DEFAULT EXPORT): Pembungkus Suspense Khusus Untuk Next.js Build ---
+export default function AbsensiPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-500"></div>
+      </div>
+    }>
+      <AbsensiForm />
+    </Suspense>
   );
 }

@@ -9,10 +9,11 @@ class Config:
     # ========================
     # Database (MySQL + SQLAlchemy)
     # ========================
-    MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+    IS_DOCKER = os.getenv("IS_DOCKER", "false") == "true"
+    MYSQL_HOST = os.getenv("MYSQL_HOST", "mysql" if IS_DOCKER else "localhost")
     MYSQL_PORT = int(os.getenv("MYSQL_PORT", 3306))
     MYSQL_USER = os.getenv("MYSQL_USER", "root")
-    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "root")
     MYSQL_DB = os.getenv("MYSQL_DB", "db_arcface_TA")
 
     SQLALCHEMY_DATABASE_URI = os.getenv(

@@ -28,7 +28,7 @@ export default function LaporanPage() {
     keterangan: ''
   });
 
-  const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
   // 1. Fetch Data Master (Branches & Users)
   const fetchMasterData = useCallback(async () => {

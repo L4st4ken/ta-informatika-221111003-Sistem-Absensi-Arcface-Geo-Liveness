@@ -28,7 +28,8 @@ export default function EnrollPage() {
         return;
       }
 
-      const res = await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/auth/upload-embedding', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL;
+      const res = await axios.post(`${API_URL}/auth/upload-embedding`, {
         image_base64: imageSrc
       }, {
         headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }

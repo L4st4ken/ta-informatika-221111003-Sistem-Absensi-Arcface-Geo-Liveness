@@ -25,7 +25,7 @@ export default function BranchManagement() {
       const token = localStorage.getItem('access_token');
       if (!token) { router.push('/'); return; }
 
-      const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev'; // Sesuaikan jika pakai Ngrok
+      const API_URL = process.env.NEXT_PUBLIC_API_URL; // Sesuaikan jika pakai Ngrok
 
       const res = await axios.get(`${API_URL}/branches/`, {
         headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
@@ -49,7 +49,7 @@ export default function BranchManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('access_token');
-    const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL;
     
     try {
       if (isEditMode) {
@@ -74,7 +74,7 @@ export default function BranchManagement() {
     if(!confirm("Yakin ingin menghapus cabang ini secara permanen?")) return;
     try {
       const token = localStorage.getItem('access_token');
-      const API_URL = 'https://nondeliberately-subordinal-maximina.ngrok-free.dev';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL;
       await axios.delete(`${API_URL}/branches/${id}/delete`, {
         headers: { Authorization: `Bearer ${token}`, 'ngrok-skip-browser-warning': 'true' }
       });

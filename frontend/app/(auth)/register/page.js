@@ -28,7 +28,8 @@ export default function RegisterPage() {
 
     try {
       // GANTI URL NGROK INI JIKA BERUBAH
-      const res = await axios.post('https://nondeliberately-subordinal-maximina.ngrok-free.dev/auth/register', formData);
+      const API_URL = process.env.NEXT_PUBLIC_API_URL;
+      const res = await axios.post(`${API_URL}/auth/register`, formData);
       
       const successMessage = res.data.msg || 'Registrasi Berhasil! Silakan Login.';
       setMsg({ type: 'success', text: successMessage });
