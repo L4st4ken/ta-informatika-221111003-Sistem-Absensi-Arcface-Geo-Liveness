@@ -1,109 +1,83 @@
-# 🧠 Sistem Absensi AI (ArcFace + Geo + Liveness)
+# 🧠 Sistem Absensi AI Berbasis Web (ArcFace + Geofencing + Liveness Detection)
 
-> Smart attendance system menggunakan **Face Recognition (ArcFace)**, **Liveness Detection**, dan **Geofencing** untuk meningkatkan keamanan dan akurasi absensi.
+> **Sistem Absensi Online Karyawan Operasional Lapangan / Kantor** menggunakan teknologi **Biometrik Wajah (ArcFace)**, **Anti-Spoofing (MiniFASNet)**, dan **Validasi Jarak Lokasi (Geofencing)** untuk menekan angka kecurangan (Fraud) secara real-time.
 
----
-
-## 📌 Deskripsi
-
-Project ini merupakan sistem absensi berbasis AI yang dirancang untuk:
-
-* Menggantikan absensi manual / fingerprint
-* Mencegah kecurangan (titip absen, spoofing foto)
-* Memastikan lokasi absensi sesuai area kerja (geofence)
-
-Sistem menggunakan teknologi:
-
-* **Face Recognition (ArcFace)** → identifikasi wajah
-* **Liveness Detection** → deteksi wajah asli (anti foto / video)
-* **Geolocation** → validasi lokasi absensi
+Proyek ini disusun dan dikembangkan sebagai dokumen implementasi teknis **Tugas Akhir / Skripsi** Program Studi Teknik Informatika.
 
 ---
 
-## 🚀 Fitur Utama
+## 📌 Deskripsi Proyek
 
-### 👤 User (Karyawan)
-
-* Login dengan JWT Authentication
-* Absensi Masuk / Pulang (IN / OUT)
-* Deteksi wajah + verifikasi biometrik
-* Liveness detection (anti spoofing)
-* Validasi lokasi (geofencing)
-* Riwayat absensi
-* Status absensi harian
+Sistem ini dirancang untuk mengatasi kelemahan absensi konvensional (seperti titip absen, pemalsuan lokasi, atau penggunaan foto/video statis saat absensi jarak jauh). Arsitektur sistem dibagi menjadi tiga layer utama:
+1. **Frontend (Next.js 16 - Turbopack)**: Antarmuka pengguna berbasis Progressive Web App (PWA) yang responsif, mengamankan akses kamera (Webcam) dan koordinat GPS presisi tinggi melalui protokol aman (HTTPS).
+2. **AI Backend Service (Python Flask)**: Engine pemroses komputasi computer vision yang mengekstrak fitur wajah (*Face Embedding*) dan menghitung kedekatan spasial koordinat.
+3. **Database Layer (MySQL 8.0)**: Penyimpanan data relasional terisolasi dengan mekanisme persistensi data (*Docker Volumes*).
 
 ---
 
-### 👨‍💼 Admin (HRD)
+## 🚀 Fitur Utama & Validasi Berlapis
 
-* Dashboard statistik real-time
-* CRUD Data Karyawan (dengan registrasi wajah)
-* CRUD Cabang (branch & radius)
-* Monitoring aktivitas absensi
-* Deteksi anomali (gagal absen)
-* Input manual (izin, sakit, cuti)
-* Export laporan ke Excel
+### 👤 Layer User (Karyawan)
+* **Autentikasi Stateless**: Login menggunakan token keamanan berbasis JWT (Access Token & Refresh Token).
+* **Validasi Anti-Spoofing (Liveness Detection)**: Menganalisis keaslian wajah input menggunakan model *MiniFASNetV2* guna mendeteksi serangan reproduksi media (*print attack* / *video playback attack*).
+* **Eksktraksi Fitur Biometrik (ArcFace)**: Membandingkan ekstraksi wajah *live camera* dengan *database template* menggunakan perhitungan *Cosine Similarity* berbasis threshold akurat hasil benchmark.
+* **Validasi Geofencing Dinamis**: Perhitungan jarak spasial antara posisi karyawan dengan titik koordinat kantor menggunakan **Rumus Haversine**, serta dilengkapi fitur *Dispensasi Surat Tugas Luar* jika bekerja di luar area perimeter.
+* **SOP & Laporan Kepulangan**: Form kepatuhan harian yang mewajibkan input teks laporan kegiatan sebelum diizinkan melakukan absensi pulang (`OUT`).
 
----
-
-## 🧠 Teknologi yang Digunakan
-
-### Backend
-
-* Python (Flask)
-* SQLAlchemy (ORM)
-* JWT Authentication
-
-### AI / Computer Vision
-
-* OpenCV
-* InsightFace (ArcFace)
-* ONNX Runtime
-* Liveness Detection (MiniFASNet)
-
-### Database
-
-* MySQL / PostgreSQL (configurable)
+### 👨‍💼 Layer Admin (HRD / Supervisor)
+* **Dashboard Analisis Spatiotemporal**: Grafik statistik kehadiran real-time dan log aktivitas user.
+* **Manajemen Kontrol Akses (CRUD)**: Pengelolaan penuh data karyawan (termasuk modul pendaftaran/enrollment wajah resolusi tinggi), jadwal kerja, dan data perimeter cabang (*Branch & Radius Meter*).
+* **Deteksi Anomali Kehadiran**: Rekam jejak otomatis ketika sistem mendeteksi kegagalan absensi akibat wajah tidak cocok atau di luar jangkauan lokasi.
+* **Ekspor Dokumen**: Laporan rekapitulasi kehadiran berkala yang siap diekspor ke dalam format Microsoft Excel (`.xlsx`).
 
 ---
 
-## 📂 Struktur Project
+## 🧠 Tumpukan Teknologi (Tech Stack)
+
+### Antarmuka (Frontend)
+* Next.js 16 (App Router & Turbopack Compiler)
+* Tailwind CSS & Lucide Icons
+* Axios (Manajemen HTTP Request Concurrent)
+
+### Engine Utama (Backend)
+* Python 3.12-slim (Flask Framework)
+* SQLAlchemy (Object-Relational Mapping / ORM)
+* PyJWT & Flask-CORS
+
+### Kecerdasan Buatan & Visi Komputer
+* OpenCV & ONNX Runtime (Eksekusi inferensi model)
+* InsightFace (ArcFace - Model Backbone: `w600k_mbf.onnx`)
+* MiniFASNetV2 (Liveness Detection Engine)
+
+### Infrastruktur & Database
+* Docker & Docker Compose v3.9
+* MySQL 8.0 Engine
+
+---
+
+## 📂 Struktur Repositori (Monorepo)
 
 ```bash
-ARCFACE-ABSENSI-BACKEND/
+SistemAbsensiArcfaceGeoLiveness/
 │
-├── app.py
-├── config.py
-├── requirements.txt
+├── backend/                  # Python Flask Source Code
+│   ├── models/               # Menyimpan file Bobot AI (.onnx & .dat)
+│   ├── routes/               # API Router (auth, attendance, admin, dll)
+│   ├── services/             # Core Engine AI (face_service, liveness_service)
+│   ├── Dockerfile            # Blueprint Image Backend
+│   ├── .env.example          # Contoh Variabel Lingkungan Backend
+│   └── app.py                # Entry Point Flask Server
 │
-├── database/
-│   └── connection.py
+├── frontend/                 # Next.js 16 Web App
+│   ├── src/app/              # App Router (User & Admin Pages)
+│   ├── .env.example          # Contoh Variabel Lingkungan Frontend
+│   └── package.json          # Node Dependencies
 │
-├── models/
-│   ├── models.py
-│   ├── shape_predictor_68_face_landmarks.dat
-│   ├── w600k_mbf.onnx
-│   ├── det_500m.onnx
-│   ├── minifasnet_v2.onnx
-│   └── minifasnet_v2.onnx.data
+├── database/                 # Folder Inisialisasi SQL Awal
+│   └── db_ststem_absen.sql   # Skema Database Relasional
 │
-├── routes/
-│   ├── auth.py
-│   ├── attendance.py
-│   ├── admin.py
-│   ├── dashboard.py
-│   └── branches.py
-│
-├── services/
-│   ├── face_detector.py
-│   ├── face_service.py
-│   └── liveness_service.py
-│
-├── utils/
-│   └── _unused/
-│
-└── logs/
-    └── app.log
+├── docker-compose.yml        # Orkestrasi Container (Flask & MySQL)
+└── .gitignore                # Manajemen Pengabaian File Sampah Git
 ```
 
 ---
@@ -113,68 +87,86 @@ ARCFACE-ABSENSI-BACKEND/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/username/ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness.git
+git clone [https://github.com/L4st4ken/ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness.git](https://github.com/L4st4ken/ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness.git)
 cd ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness
 ```
 
 ### 2. Buat Virtual Environment
 
-```bash
-python -m venv venv
-venv\Scripts\activate   # Windows
-```
+Salin berkas cetak biru .env.example menjadi file .env asli di masing-masing folder layanan:
 
-### 3. Install Dependency
+**Untuk Backend (backend/.env)**:
 
 ```bash
-pip install -r requirements.txt
+cp backend/.env.example backend/.env
+```
+*Buka file tersebut dan sesuaikan nilai `ARCFACE_THRESHOLD=0.50` (Hasil optimal berdasarkan pengujian kalkulasi Equal Error Rate / EER).*
+
+* **Untuk Frontend (`frontend/.env.local`)**:
+  Buat file baru bernama `.env.local` di dalam direktori `frontend/`:
+```.env.local
+  NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
-### 4. Setup Environment (.env)
+### 3. Eksekusi Infrastruktur Menggunakan Docker Compose
 
-Buat file `.env` dan isi:
+Jalankan perintah berikut di folder utama (akar) proyek untuk mengunduh image, membangun container, dan mengimpor database secara otomatis:
 
-```env
-SECRET_KEY=your_secret_key
-DATABASE_URL=your_database_url
-ARCFACE_THRESHOLD=0.50
+```bash
+docker compose up -d --build
 ```
+
+Gunakan `docker compose down` untuk menghentikan seluruh layanan tanpa kehilangan data absensi berkat fitur Docker Volumes (mysql_data).
+
+### 4. Menjalankan Aplikasi Frontend (Next.js)
+
+Buka terminal baru, masuk ke direktori frontend, lakukan build produksi, lalu nyalakan server lokal Next.js:
+
+```bash
+cd frontend
+npm install       # Mengunduh semua modul node
+npm run build     # Melakukan kompilasi optimasi statis Next.js
+npm run start     # Menjalankan server Next.js mode Production
+```
+Aplikasi frontend Anda siap diakses melalui peramban pada alamat: `http://localhost:3000`.
 
 ---
 
-### 5. Jalankan Server
+### Alur Arsitektur Logika Sistem
+Aplikasi memproses request absensi karyawan melalui pipa pemrosesan sinkronous berikut:
+```plaintext
+┌────────────────────────┐
+       │   Kamera Web / HP Input│
+       └───────────┬────────────┘
+                   ▼
+       ┌────────────────────────┐
+       │   Haversine Geofence   │ -> [FAIL-FAST] Validasi radius koordinat GPS awal
+       └───────────┬────────────┘
+                   │
+                   ├─► [DI LUAR RADIUS] ──► ABSEN DITOLAK (Gagal Lokasi)
+                   │
+                   ▼ [DI DALAM RADIUS / SURAT TUGAS]
+       ┌────────────────────────┐
+       │   Face Detection       │ -> (Mencari koordinat wajah/bounding box)
+       └───────────┬────────────┘
+                   ▼
+       ┌────────────────────────┐
+       │   Liveness Detection   │ -> (Validasi real face vs fake face media)
+       └───────────┬────────────┘
+                   ▼
+       ┌────────────────────────┐
+       │ Face Embedding Extract │ -> (Ekstraksi 512-D vektor via ArcFace)
+       └───────────┬────────────┘
+                   ▼
+       ┌────────────────────────┐
+       │   Cosine Similarity    │ -> (Pencocokan nilai matriks vs database)
+       └───────────┬────────────┘
+                   ▼
+       ┌────────────────────────┐
+       │  Penyimpanan Database  │ -> (Status ABSEN BERHASIL tersimpan)
+       └────────────────────────┘
 
-```bash
-python app.py
 ```
-
-Server akan berjalan di:
-
-```
-http://localhost:5000
-```
-
----
-
-## 🔐 Alur Sistem Absensi
-
-```text
-Camera Input
-   ↓
-Face Detection
-   ↓
-Liveness Detection
-   ↓
-Face Embedding (ArcFace)
-   ↓
-Cosine Similarity
-   ↓
-Geofence Validation
-   ↓
-Save to Database
-```
-
----
 
 ## 📊 API Endpoint (Ringkasan)
 
