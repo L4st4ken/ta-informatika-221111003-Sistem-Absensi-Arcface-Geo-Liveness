@@ -135,7 +135,7 @@ Aplikasi frontend Anda siap diakses melalui peramban pada alamat: `http://localh
 ### Alur Arsitektur Logika Sistem
 Aplikasi memproses request absensi karyawan melalui pipa pemrosesan sinkronous berikut:
 ```plaintext
-┌────────────────────────┐
+       ┌────────────────────────┐
        │   Kamera Web / HP Input│
        └───────────┬────────────┘
                    ▼
