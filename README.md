@@ -86,8 +86,10 @@ SistemAbsensiArcfaceGeoLiveness/
 
 ### 1. Clone Repository
 
-```bash
-git clone [https://github.com/L4st4ken/ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness.git](https://github.com/L4st4ken/ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness.git)
+```bash# 1. Kloning Repositori langsung ke branch 'test'
+git clone -b test https://github.com/L4st4ken/ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness.git
+
+# 2. Masuk ke direktori utama proyek
 cd ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness
 ```
 
