@@ -1,7 +1,7 @@
 # 🧠 Sistem Absensi AI (ArcFace + Geo + Liveness)
 
 > [!IMPORTANT]
-> ### 🚨 Eits, Kok Kosong? 
+> ### 🚨 LAHHH, Kok Kosong? 
 > Seluruh *source code* final, infrastruktur Docker, aplikasi Next.js (Turbopack), dan Flask Backend untuk proyek Tugas Akhir ini berada di **Branch `test`**.
 > 
 > 👉 **[KLIK DI SINI UNTUK MENUJU KODE FINAL (BRANCH TEST)](https://github.com/L4st4ken/ta-informatika-221111003-Sistem-Absensi-Arcface-Geo-Liveness/tree/test)**
