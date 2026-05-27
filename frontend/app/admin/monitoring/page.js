@@ -15,6 +15,7 @@ export default function MonitoringPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedBranch, setSelectedBranch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeStatus, setActiveStatus] = useState("All");
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -46,6 +47,13 @@ export default function MonitoringPage() {
   const statHadir = data.filter(r => r.status === 'Hadir' || r.status === 'Dinas Luar').length;
   const statIzin = data.filter(r => ['Sakit', 'Izin', 'Cuti'].includes(r.status)).length;
   const statBelum = data.filter(r => r.status === 'Belum Hadir').length;
+  const filteredTableData = data.filter(row => {
+    if (activeStatus === "All") return true;
+    if (activeStatus === "Hadir") return row.status === 'Hadir' || row.status === 'Dinas Luar';
+    if (activeStatus === "Belum") return row.status === 'Belum Hadir';
+    if (activeStatus === "Izin") return ['Sakit', 'Izin', 'Cuti'].includes(row.status);
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -93,34 +101,51 @@ export default function MonitoringPage() {
         {/* === KARTU STATISTIK DINAMIS === */}
         {!loading && data.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-full"><Users size={20}/></div>
+            
+            <div 
+              onClick={() => setActiveStatus("All")}
+              className={`p-5 rounded-2xl shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300 ${activeStatus === 'All' ? 'bg-indigo-50 border-2 border-indigo-500 scale-105' : 'bg-white border border-gray-100 hover:bg-gray-50'}`}
+            >
+              <div className="p-3 bg-blue-100 text-blue-600 rounded-full"><Users size={20}/></div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total Karyawan</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Karyawan</p>
                 <p className="text-2xl font-black text-gray-800">{statTotal}</p>
               </div>
             </div>
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-              <div className="p-3 bg-green-50 text-green-600 rounded-full"><UserCheck size={20}/></div>
+
+            <div 
+              onClick={() => setActiveStatus("Hadir")}
+              className={`p-5 rounded-2xl shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300 ${activeStatus === 'Hadir' ? 'bg-green-50 border-2 border-green-500 scale-105' : 'bg-white border border-gray-100 hover:bg-gray-50'}`}
+            >
+              <div className="p-3 bg-green-100 text-green-600 rounded-full"><UserCheck size={20}/></div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hadir / Dinas</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Hadir / Dinas</p>
                 <p className="text-2xl font-black text-gray-800">{statHadir}</p>
               </div>
             </div>
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-              <div className="p-3 bg-red-50 text-red-600 rounded-full"><AlertTriangle size={20}/></div>
+
+            <div 
+              onClick={() => setActiveStatus("Belum")}
+              className={`p-5 rounded-2xl shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300 ${activeStatus === 'Belum' ? 'bg-red-50 border-2 border-red-500 scale-105' : 'bg-white border border-gray-100 hover:bg-gray-50'}`}
+            >
+              <div className="p-3 bg-red-100 text-red-600 rounded-full"><AlertTriangle size={20}/></div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Belum Hadir</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Belum Hadir</p>
                 <p className="text-2xl font-black text-gray-800">{statBelum}</p>
               </div>
             </div>
-            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-              <div className="p-3 bg-purple-50 text-purple-600 rounded-full"><FileText size={20}/></div>
+
+            <div 
+              onClick={() => setActiveStatus("Izin")}
+              className={`p-5 rounded-2xl shadow-sm flex items-center gap-4 cursor-pointer transition-all duration-300 ${activeStatus === 'Izin' ? 'bg-purple-50 border-2 border-purple-500 scale-105' : 'bg-white border border-gray-100 hover:bg-gray-50'}`}
+            >
+              <div className="p-3 bg-purple-100 text-purple-600 rounded-full"><FileText size={20}/></div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sakit / Izin</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Sakit / Izin</p>
                 <p className="text-2xl font-black text-gray-800">{statIzin}</p>
               </div>
             </div>
+
           </div>
         )}
 
@@ -140,8 +165,8 @@ export default function MonitoringPage() {
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
                   <tr><td colSpan="5" className="p-12 text-center text-gray-400 animate-pulse">Sinkronisasi Data...</td></tr>
-                ) : data.length > 0 ? (
-                  data.map((row, i) => (
+                ) : filteredTableData.length > 0 ? (
+                  filteredTableData.map((row, i) => (
                     <tr key={i} className="hover:bg-gray-50/50 transition">
                       <td className="p-5">
                         <p className="font-bold text-gray-800">{row.nama}</p>
