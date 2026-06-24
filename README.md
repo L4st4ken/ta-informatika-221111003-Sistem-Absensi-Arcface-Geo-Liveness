@@ -8,9 +8,9 @@
 
 ---
 
-## 🏃‍♂️ Cara Cepat Kloning Kode Final
+## Cara Cepat Kloning Kode Final
 
-Jika Anda ingin langsung mengunduh dan menjalankan sistem absensi ini di lokal, pastikan untuk mengarahkan kloning langsung ke branch `test` dengan perintah berikut:
+Jika ingin langsung mengunduh dan menjalankan sistem absensi ini di lokal, pastikan untuk mengarahkan kloning langsung ke branch `test` dengan perintah berikut:
 
 ```bash
 # Kloning langsung ke branch 'test'
